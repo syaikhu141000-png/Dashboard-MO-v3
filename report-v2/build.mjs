@@ -1,5 +1,6 @@
 // Jana data.json untuk Report Marketing V2 (public).
-// Guna: node build.mjs --xlsx CC5.xlsx --meta meta.json --locks DIR --notes DIR --year 2026 --out data.json
+// Guna: node build.mjs --xlsx CC5.xlsx --meta meta.json [--metaupd minggu_baru.json] --locks DIR --notes DIR --year 2026 --out data.json
+// - metaupd: {"11-3":{spend,lm,acc,until}} minggu Meta yang baru ditarik (ganti minggu sama dalam meta)
 // - xlsx  : CC5 IMPORTEDDATA (export xlsx dari Google Drive)
 // - meta  : {at, weeks:{"m-w":{spend,lm,...}}}  (spend SEBELUM 8% cukai; page tambah 8%)
 // - locks : folder fail JSON doc "locks" (satu fail satu doc) dari page V2
@@ -76,6 +77,7 @@ pl.sort((a,b)=>['Facebook','Google','TikTok'].indexOf(a)-['Facebook','Google','T
 if(!pl.length){ console.error("error: tiada tab "+YEAR); process.exit(1); }
 function readDir(d){ const o={}; if(!d||!fs.existsSync(d)) return o; for(const f of fs.readdirSync(d)) if(f.endsWith('.json')){ let j=JSON.parse(fs.readFileSync(path.join(d,f),'utf8')); if(j&&j.data&&typeof j.data==='object'&&!j.p&&!j.key) j=j.data; o[f.replace(/\.json$/,'')]=j; } return o; }
 let meta={at:null,weeks:{}}; if(A.meta){ const j=JSON.parse(fs.readFileSync(A.meta,'utf8')); const x=(j.weeks?j:(j.data||j)); meta={at:x.at||null,ver:x.ver||null,weeks:x.weeks||{}}; }
+if(A.metaupd){ const u=JSON.parse(fs.readFileSync(A.metaupd,'utf8')); for(const k in u){ if(!/^\d{1,2}-[1-4]$/.test(k)) continue; const o=u[k]; if(typeof o.spend!=='number'||typeof o.lm!=='number') continue; meta.weeks[k]=Object.assign({},o,{spend:Math.round(o.spend*100)/100}); } meta.at=new Date().toISOString(); }
 const locks=readDir(A.locks), notes=readDir(A.notes);
 for(const k in locks) for(const f of ['version','id','createdAt','updatedAt']) delete locks[k][f];
 const out={y:YEAR,at:new Date().toISOString(),pl,raw,tabs,meta,locks,notes,src:"CC5 IMPORTEDDATA + Meta Ads (MO2+MO4+MO05)"};
