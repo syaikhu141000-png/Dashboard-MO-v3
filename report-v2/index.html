@@ -118,7 +118,7 @@ h1{margin:5px 0 0;font-size:38px;line-height:1.08;font-weight:600;letter-spacing
 .month-primary span,.month-stat span{display:block;color:var(--mute);font-size:10px;text-transform:uppercase;letter-spacing:.065em;font-weight:650}
 .month-primary b{font-size:27px;line-height:1;font-weight:750;font-variant-numeric:tabular-nums}
 .month-primary small{font-size:11px;color:var(--mute)}
-.month-stats{display:grid;grid-template-columns:1.25fr .7fr 1fr;gap:6px}
+.month-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
 .month-stat{min-width:0}
 .month-stat b{display:block;margin-top:3px;font-size:11.5px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
 
@@ -552,9 +552,9 @@ function renderMonthlyOverview(){
   var box=$('monthlyOverviewW'); box.hidden=S.type!=='tahunan'; if(box.hidden) return;
   $('monthlyOverview').innerHTML=MFULL.map(function(name,idx){
     var m=idx+1,L=listFor('bulanan',m),c=agg(liveW,L),has=!!c,isNow=YEAR===TODAY.getFullYear()&&m===TODAY.getMonth()+1;
-    if(!has) return '<button type="button" class="month-card empty" disabled><div class="month-head"><span class="month-name">'+name+'</span><span class="month-badge">Tiada data</span></div><div class="month-primary"><div><span>Leads Sales</span><b>—</b></div></div><div class="month-stats"><div class="month-stat"><span>Spend</span><b>—</b></div><div class="month-stat"><span>Enroll</span><b>—</b></div><div class="month-stat"><span>CPP</span><b>—</b></div></div></button>';
-    var ls=byK('ls'),sp=byK('spend'),en=byK('enrol'),cpp=byK('cpp');
-    return '<button type="button" class="month-card" data-act="monthcard" data-v="'+m+'"><div class="month-head"><span class="month-name">'+name+'</span><span class="month-badge">'+(isNow?'Bulan semasa':'Lihat report')+'</span></div><div class="month-primary"><div><span>Leads Sales</span><b>'+fmtText(ls,rv(c,'ls'))+'</b></div><small>'+MN[m-1]+' '+YEAR+'</small></div><div class="month-stats"><div class="month-stat"><span>Spend</span><b>'+fmtText(sp,rv(c,'spend'))+'</b></div><div class="month-stat"><span>Enroll</span><b>'+fmtText(en,rv(c,'enrol'))+'</b></div><div class="month-stat"><span>CPP</span><b>'+fmtText(cpp,rv(c,'cpp'))+'</b></div></div></button>';
+    if(!has) return '<button type="button" class="month-card empty" disabled><div class="month-head"><span class="month-name">'+name+'</span><span class="month-badge">Tiada data</span></div><div class="month-primary"><div><span>Leads Sales</span><b>—</b></div></div><div class="month-stats"><div class="month-stat"><span>Spend</span><b>—</b></div><div class="month-stat"><span>CPL Sales</span><b>—</b></div><div class="month-stat"><span>Enroll</span><b>—</b></div><div class="month-stat"><span>CPP</span><b>—</b></div></div></button>';
+    var ls=byK('ls'),sp=byK('spend'),cpl=byK('cpls'),en=byK('enrol'),cpp=byK('cpp');
+    return '<button type="button" class="month-card" data-act="monthcard" data-v="'+m+'"><div class="month-head"><span class="month-name">'+name+'</span><span class="month-badge">'+(isNow?'Bulan semasa':'Lihat report')+'</span></div><div class="month-primary"><div><span>Leads Sales</span><b>'+fmtText(ls,rv(c,'ls'))+'</b></div><small>'+MN[m-1]+' '+YEAR+'</small></div><div class="month-stats"><div class="month-stat"><span>Spend</span><b>'+fmtText(sp,rv(c,'spend'))+'</b></div><div class="month-stat"><span>CPL Sales</span><b>'+fmtText(cpl,rv(c,'cpls'))+'</b></div><div class="month-stat"><span>Enroll</span><b>'+fmtText(en,rv(c,'enrol'))+'</b></div><div class="month-stat"><span>CPP</span><b>'+fmtText(cpp,rv(c,'cpp'))+'</b></div></div></button>';
   }).join('');
 }
 
