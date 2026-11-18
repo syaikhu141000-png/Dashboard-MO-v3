@@ -105,6 +105,23 @@ h1{margin:5px 0 0;font-size:38px;line-height:1.08;font-weight:600;letter-spacing
 .vc-row.current .vc-fill{background:linear-gradient(90deg,var(--accent),var(--accent2))}
 .vc-row.current span:first-child{color:var(--accent);font-weight:700}
 
+.monthly-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.month-card{appearance:none;width:100%;text-align:left;color:var(--ink);font:inherit;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:17px;cursor:pointer;box-shadow:0 5px 18px rgba(18,41,55,.04);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;position:relative;overflow:hidden}
+.month-card::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:.8}
+.month-card:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--accent) 45%,var(--line));box-shadow:0 11px 25px rgba(18,41,55,.09)}
+.month-card.empty{cursor:default;opacity:.54;box-shadow:none}
+.month-card.empty:hover{transform:none;border-color:var(--line)}
+.month-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.month-name{font-size:16px;font-weight:750;letter-spacing:-.02em}
+.month-badge{font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:3px 7px;border-radius:999px}
+.month-primary{display:flex;align-items:end;justify-content:space-between;gap:10px;padding-bottom:13px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.month-primary span,.month-stat span{display:block;color:var(--mute);font-size:10px;text-transform:uppercase;letter-spacing:.065em;font-weight:650}
+.month-primary b{font-size:27px;line-height:1;font-weight:750;font-variant-numeric:tabular-nums}
+.month-primary small{font-size:11px;color:var(--mute)}
+.month-stats{display:grid;grid-template-columns:1.25fr .7fr 1fr;gap:6px}
+.month-stat{min-width:0}
+.month-stat b{display:block;margin-top:3px;font-size:11.5px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+
 .dl{font-size:12.5px;display:inline-flex;align-items:center;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .dl.up{color:var(--good)} .dl.down{color:var(--bad)} .dl.flat{color:var(--mute)}
 .dl svg{display:block}
@@ -164,6 +181,7 @@ th.cur{color:var(--accent)}
   .two,.three{grid-template-columns:minmax(0,1fr)}
   .second{grid-template-columns:repeat(2,minmax(0,1fr))}
   .visual-compare{grid-template-columns:minmax(0,1fr)}
+  .monthly-grid{grid-template-columns:minmax(0,1fr)}
   .bar{position:static;padding:12px}
   .theme-seg .theme-label{display:none}
   .hero{padding:20px}
@@ -244,6 +262,11 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end}
   <section id="compareVisualW" hidden aria-label="Visual perbandingan">
     <div class="secthead"><h2>Prestasi sepintas lalu</h2><p id="compareVisualSub"></p></div>
     <div class="visual-compare" id="compareVisual"></div>
+  </section>
+
+  <section id="monthlyOverviewW" hidden aria-label="Overall bulanan">
+    <div class="secthead"><h2>Overall bulanan</h2><p>Klik bulan untuk buka report penuh</p></div>
+    <div class="monthly-grid" id="monthlyOverview"></div>
   </section>
 
   <section class="report-card" aria-label="Jadual">
@@ -525,6 +548,16 @@ function renderBar(){
   }
 }
 
+function renderMonthlyOverview(){
+  var box=$('monthlyOverviewW'); box.hidden=S.type!=='tahunan'; if(box.hidden) return;
+  $('monthlyOverview').innerHTML=MFULL.map(function(name,idx){
+    var m=idx+1,L=listFor('bulanan',m),c=agg(liveW,L),has=!!c,isNow=YEAR===TODAY.getFullYear()&&m===TODAY.getMonth()+1;
+    if(!has) return '<button type="button" class="month-card empty" disabled><div class="month-head"><span class="month-name">'+name+'</span><span class="month-badge">Tiada data</span></div><div class="month-primary"><div><span>Leads Sales</span><b>—</b></div></div><div class="month-stats"><div class="month-stat"><span>Spend</span><b>—</b></div><div class="month-stat"><span>Enroll</span><b>—</b></div><div class="month-stat"><span>CPP</span><b>—</b></div></div></button>';
+    var ls=byK('ls'),sp=byK('spend'),en=byK('enrol'),cpp=byK('cpp');
+    return '<button type="button" class="month-card" data-act="monthcard" data-v="'+m+'"><div class="month-head"><span class="month-name">'+name+'</span><span class="month-badge">'+(isNow?'Bulan semasa':'Lihat report')+'</span></div><div class="month-primary"><div><span>Leads Sales</span><b>'+fmtText(ls,rv(c,'ls'))+'</b></div><small>'+MN[m-1]+' '+YEAR+'</small></div><div class="month-stats"><div class="month-stat"><span>Spend</span><b>'+fmtText(sp,rv(c,'spend'))+'</b></div><div class="month-stat"><span>Enroll</span><b>'+fmtText(en,rv(c,'enrol'))+'</b></div><div class="month-stat"><span>CPP</span><b>'+fmtText(cpp,rv(c,'cpp'))+'</b></div></div></button>';
+  }).join('');
+}
+
 /* ---------- render ---------- */
 function render(){
   if(!READY) return;
@@ -558,6 +591,7 @@ function render(){
         '<div class="vc-row current"><span>'+esc(P.short)+'</span><span class="vc-track"><i class="vc-fill" style="width:'+Math.max(3,Math.abs(now||0)/mx*100)+'%"></i></span><b>'+fmtText(m,now)+'</b></div></div>';
     }).join('');
   }
+  renderMonthlyOverview();
 
   var head,body='';
   if(cmp){
@@ -882,7 +916,7 @@ function switchYear(y){
   var sc=srcFor(y); if(!sc) return; YEAR=y; SHEET_ID=sc.id; TXT={};
   loadData().then(function(){ pickDefault(); render(); }).catch(function(err){ READY=false; clearView(); setBanner('<b>Gagal baca Google Sheet '+y+'</b> · '+esc(errText(err))+' Semak link dan nama tab. <button type="button" class="lnk" data-act="reload">Muat semula</button>'); renderSrc(); });
 }
-function clearView(){ ['kpis','second','compareVisual','tbl','sum','notes'].forEach(function(id){ $(id).innerHTML=''; }); $('compareVisualW').hidden=true; $('hTitle').textContent=''; $('hSub').textContent=''; $('hState').textContent=''; }
+function clearView(){ ['kpis','second','compareVisual','monthlyOverview','tbl','sum','notes'].forEach(function(id){ $(id).innerHTML=''; }); $('compareVisualW').hidden=true; $('monthlyOverviewW').hidden=true; $('hTitle').textContent=''; $('hSub').textContent=''; $('hState').textContent=''; }
 function sheetId(link){ var m=String(link).match(/\/d\/([a-zA-Z0-9_-]{20,})/); if(m) return m[1]; return /^[a-zA-Z0-9_-]{20,}$/.test(String(link).trim())?String(link).trim():null; }
 function renderSrc(){
   var ys=SOURCES.slice().sort(function(a,b){return a.y-b.y;});
@@ -931,6 +965,7 @@ document.addEventListener('click',function(e){
   if(NPEND){ clearTimeout(NTIMER); flushSave(); }
   var a=b.getAttribute('data-act'), v=b.getAttribute('data-v');
   if(a==='theme'){ applyTheme(v,true); return; }
+  if(a==='monthcard'){ S.type='bulanan'; S.month=parseInt(v,10); S.cmpMode='prev'; fixSel(); render(); document.querySelector('.hero').scrollIntoView({behavior:'smooth',block:'start'}); return; }
   if(a==='lock'){ onLockBtn(); return; }
   if(a==='srcadd'){
     var y=parseInt($('srcYear').value,10), id=sheetId($('srcLink').value), msg=$('srcMsg');
