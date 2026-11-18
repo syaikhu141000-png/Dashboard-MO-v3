@@ -1,0 +1,83 @@
+// Jana data.json untuk Report Marketing V2 (public).
+// Guna: node build.mjs --xlsx CC5.xlsx --meta meta.json --locks DIR --notes DIR --year 2026 --out data.json
+// - xlsx  : CC5 IMPORTEDDATA (export xlsx dari Google Drive)
+// - meta  : {at, weeks:{"m-w":{spend,lm,...}}}  (spend SEBELUM 8% cukai; page tambah 8%)
+// - locks : folder fail JSON doc "locks" (satu fail satu doc) dari page V2
+// - notes : folder fail JSON doc "notes" dari page V2
+// Sel kosong = null. Tiada nombor direka.
+import fs from "node:fs"; import path from "node:path"; import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const X = require("xlsx");
+const A = {}; process.argv.slice(2).forEach((v,i,a)=>{ if(v.startsWith("--")) A[v.slice(2)]=a[i+1]; });
+const YEAR = +(A.year||new Date().getFullYear());
+var SECT={FACEBOOK:'Facebook',GOOGLE:'Google',TIKTOK:'TikTok'};
+var MTAB=[['JAN'],['FEB'],['MAC','MAR'],['APRIL','APR'],['MEI','MAY'],['JUN'],['JULAI','JUL'],['OGOS','AUG'],['SEPT','SEP'],['OKT','OCT'],['NOV'],['DIS','DEC']];
+var F=['lm','ls','intro','book','enrol','spend'];
+/* ---------- baca CSV ---------- */
+function parseCSV(t){
+  var rows=[],row=[],f='',q=false;
+  for(var i=0;i<t.length;i++){ var ch=t[i];
+    if(q){ if(ch==='"'){ if(t[i+1]==='"'){f+='"';i++;} else q=false; } else f+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===','){ row.push(f); f=''; }
+    else if(ch==='\n'||ch==='\r'){ if(ch==='\r'&&t[i+1]==='\n') i++; row.push(f); f=''; rows.push(row); row=[]; }
+    else f+=ch;
+  }
+  if(f!==''||row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+function cell(v){ /* sel kosong atau ralat = null */
+  if(v==null) return null; var t=String(v).trim(); if(t===''||t.charAt(0)==='#') return null;
+  t=t.replace(/RM/gi,'').replace(/[,\s]/g,''); if(/%$/.test(t)) return null;
+  var n=parseFloat(t); return isNaN(n)?null:n;
+}
+function isHeader(r){
+  var a=String(r[0]||'').trim(); if(!a||a.indexOf(':')>=0||/^RM/i.test(a)||!isNaN(parseFloat(a))) return false;
+  for(var c=1;c<=12;c++) if(String(r[c]||'').trim()!=='') return false;
+  return true;
+}
+/* Ambil nilai mingguan blok platform. Lajur minggu: C, E, G, I (indeks 2,4,6,8). */
+function parseMonth(text){
+  var rows=parseCSV(text), out={}, cur=null, blk=null;
+  rows.forEach(function(r){
+    if(isHeader(r)){
+      var h=String(r[0]).trim().toUpperCase(), key=null;
+      for(var k in SECT) if(h.indexOf(k)===0) key=SECT[k];
+      cur=(key&&!out[key])?key:null;
+      if(cur){ blk=[{},{},{},{}]; out[cur]=blk; }
+      return;
+    }
+    if(!cur) return;
+    var a=String(r[0]||'').trim().toLowerCase(), b=String(r[1]||'').trim().toLowerCase(), f=null;
+    if(a.indexOf('total marketer')===0) f='lm';
+    else if(a.indexOf('total team sales')===0) f='ls';
+    else if(b==='total ads spend') f='spend';
+    else if(a.indexOf('booking by week')===0) f='book';
+    else if(a.indexOf('intro class')===0) f='intro';
+    else if(a.indexOf('total enrollment')===0) f='enrol';
+    if(!f) return;
+    for(var w=0;w<4;w++) blk[w][f]=cell(r[2+w*2]);
+  });
+  return out;
+}
+
+
+const wb = X.readFile(A.xlsx); const names={}; wb.SheetNames.forEach(n=>names[n.trim().toUpperCase().replace(/\s+/g,' ')]=n);
+const yy=String(YEAR).slice(2), now=new Date(Date.now()+8*3600000);
+const lastM = now.getUTCFullYear()>YEAR?12:(now.getUTCFullYear()<YEAR?0:now.getUTCMonth()+1);
+const raw={}, pl=[], tabs={}, miss=[];
+for(let m=1;m<=lastM;m++){
+  const tab=MTAB[m-1].map(b=>names[b+' '+yy]).find(Boolean); if(!tab){ miss.push(m); continue; }
+  const d=parseMonth(X.utils.sheet_to_csv(wb.Sheets[tab],{blankrows:true}));
+  for(const p in d){ if(!pl.includes(p)) pl.push(p); raw[p]=raw[p]||{}; raw[p][m]=d[p].map(w=>{ const o={}; F.forEach(k=>o[k]=w[k]==null?null:w[k]); return o; }); }
+  tabs[m]=tab;
+}
+pl.sort((a,b)=>['Facebook','Google','TikTok'].indexOf(a)-['Facebook','Google','TikTok'].indexOf(b));
+if(!pl.length){ console.error("error: tiada tab "+YEAR); process.exit(1); }
+function readDir(d){ const o={}; if(!d||!fs.existsSync(d)) return o; for(const f of fs.readdirSync(d)) if(f.endsWith('.json')){ let j=JSON.parse(fs.readFileSync(path.join(d,f),'utf8')); if(j&&j.data&&typeof j.data==='object'&&!j.p&&!j.key) j=j.data; o[f.replace(/\.json$/,'')]=j; } return o; }
+let meta={at:null,weeks:{}}; if(A.meta){ const j=JSON.parse(fs.readFileSync(A.meta,'utf8')); const x=(j.weeks?j:(j.data||j)); meta={at:x.at||null,ver:x.ver||null,weeks:x.weeks||{}}; }
+const locks=readDir(A.locks), notes=readDir(A.notes);
+for(const k in locks) for(const f of ['version','id','createdAt','updatedAt']) delete locks[k][f];
+const out={y:YEAR,at:new Date().toISOString(),pl,raw,tabs,meta,locks,notes,src:"CC5 IMPORTEDDATA + Meta Ads (MO2+MO4+MO05)"};
+fs.writeFileSync(A.out||'data.json',JSON.stringify(out));
+console.log(JSON.stringify({ok:true,year:YEAR,tabs,miss,pl,metaWeeks:Object.keys(meta.weeks).length,metaAt:meta.at,locks:Object.keys(locks).length,notes:Object.keys(notes).length}));

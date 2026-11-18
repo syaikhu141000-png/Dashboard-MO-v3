@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Report Marketing V2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Susun atur: satu lajur sempit. Bar kawalan nipis, tajuk tempoh, empat angka utama, jadual berkumpulan, kemudian rumusan. Satu aksen biru. */
+:root{
+  --bg:#f5f6f7; --surface:#ffffff; --ink:#14181d; --ink2:#47505a; --mute:#78818c;
+  --line:#e2e5e9; --line2:#cfd4da; --accent:#1b5e8c; --accent-soft:#e8f0f6;
+  --good:#17703a; --bad:#b0342c; --good-bg:#e6f3ea; --bad-bg:#f8e7e5; --cur-bg:#f2f6f9;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1114; --surface:#151a1f; --ink:#eceff2; --ink2:#b4bcc5; --mute:#8a949f;
+    --line:#252c33; --line2:#36404a; --accent:#6fb0dd; --accent-soft:#17283a;
+    --good:#5ec283; --bad:#ee8077; --good-bg:#132a1c; --bad-bg:#2f1a18; --cur-bg:#1a232a; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1114; --surface:#151a1f; --ink:#eceff2; --ink2:#b4bcc5; --mute:#8a949f;
+  --line:#252c33; --line2:#36404a; --accent:#6fb0dd; --accent-soft:#17283a;
+  --good:#5ec283; --bad:#ee8077; --good-bg:#132a1c; --bad-bg:#2f1a18; --cur-bg:#1a232a; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+.wrap{max-width:980px;margin:0 auto;padding-block:28px 64px;display:flex;flex-direction:column;gap:28px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mute{color:var(--mute)}
+.eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);font-weight:500}
+
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.brand{font-weight:600;letter-spacing:-.01em;margin-right:auto;display:flex;align-items:center;gap:10px}
+.brand i{font-style:normal;font-size:11px;font-weight:500;color:var(--mute);border:1px solid var(--line2);border-radius:4px;padding:1px 6px;letter-spacing:.04em}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:6px 12px;cursor:pointer;color:var(--ink2)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button:hover{background:var(--bg)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:500}
+.sel{display:inline-flex;align-items:center;gap:8px;color:var(--mute);font-size:12.5px}
+.sel select{border:1px solid var(--line2);border-radius:6px;background:var(--surface);padding:6px 28px 6px 10px;appearance:none;-webkit-appearance:none;cursor:pointer;color:var(--ink);
+  background-image:linear-gradient(45deg,transparent 50%,var(--mute) 50%),linear-gradient(135deg,var(--mute) 50%,transparent 50%);
+  background-position:calc(100% - 15px) 55%,calc(100% - 10px) 55%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.sample{font-size:12.5px;color:var(--ink2);background:var(--accent-soft);border-radius:6px;padding:8px 12px}
+.sample b{font-weight:600;color:var(--accent)}
+
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 24px}
+h1{margin:4px 0 0;font-size:34px;line-height:1.1;font-weight:600;letter-spacing:-.025em;text-wrap:balance}
+.sub{color:var(--ink2);margin-top:6px}
+.state{font-size:12.5px;border:1px solid var(--line2);border-radius:999px;padding:3px 11px;color:var(--ink2);background:var(--surface);white-space:nowrap}
+.state.open{border-color:var(--accent);color:var(--accent)}
+
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--ink);border-bottom:1px solid var(--line)}
+.kpi{padding:16px 18px 16px 0;min-width:0}
+.kpi+.kpi{padding-left:18px;border-left:1px solid var(--line)}
+.kpi .v{font-size:30px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:4px;white-space:nowrap}
+.kpi .d{font-size:12.5px;margin-top:2px;min-height:19px}
+.second{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px 20px;padding-top:16px}
+.second div{min-width:0}
+.second b{display:block;font-size:16px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.dl{font-size:12.5px;display:inline-flex;align-items:center;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dl.up{color:var(--good)} .dl.down{color:var(--bad)} .dl.flat{color:var(--mute)}
+.dl svg{display:block}
+
+.secthead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 20px;margin-bottom:12px}
+h2{margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.secthead p{margin:0;font-size:12.5px;color:var(--mute)}
+.tw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%}
+th,td{padding:10px 16px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--line)}
+th{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--mute);font-weight:500;padding-block:11px}
+th.l,td.l{text-align:left}
+td.l{color:var(--ink)}
+tr.g td{padding:14px 16px 6px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);border-bottom:0;font-weight:500;text-align:left}
+tbody tr:last-child td{border-bottom:0}
+td.cur{font-weight:600;background:var(--cur-bg)}
+th.cur{color:var(--accent)}
+
+.two{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:28px}
+.two p{margin:8px 0 0;color:var(--ink2);max-width:64ch}
+.legend{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--mute);margin-top:8px}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.note{--c:var(--accent);--cb:var(--accent-soft);background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--c);border-radius:10px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:10px;min-width:0;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.note.n-p{--c:var(--bad);--cb:var(--bad-bg)}
+.note.n-a{--c:var(--accent);--cb:var(--accent-soft)}
+.note.n-n{--c:var(--good);--cb:var(--good-bg)}
+.nh{display:flex;gap:10px;align-items:center}
+.ni{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;background:var(--cb);color:var(--c);flex:none}
+.nt{font-weight:600;font-size:14.5px;line-height:1.25}
+.ns{font-size:12px;color:var(--mute)}
+.note textarea,.npdf{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--bg);resize:none;overflow:hidden;min-height:120px;line-height:1.55;font-size:13.5px;white-space:pre-wrap;word-wrap:break-word}
+.note textarea:focus{outline:none;border-color:var(--c);box-shadow:0 0 0 3px var(--cb);background:var(--surface)}
+.note textarea[readonly]{background:transparent;border-style:dashed}
+.nstate{font-size:12px;color:var(--mute);display:inline-flex;align-items:center;gap:6px}
+.nstate::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--line2)}
+.nstate.ok::before{background:var(--good)}
+.nstate.busy::before{background:var(--accent)}
+.nstate.err{color:var(--bad)}.nstate.err::before{background:var(--bad)}
+.foot{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding-top:16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--mute)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line2);background:var(--surface);border-radius:6px;padding:6px 12px;cursor:pointer}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+@media (max-width:760px){
+  h1{font-size:28px}
+  .kpi .v{font-size:21px}
+  th,td{padding-inline:10px}
+  .kpi{padding-right:12px}
+  .kpi+.kpi{padding-left:12px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi:nth-child(3){padding-left:0;border-left:0}
+  .kpi:nth-child(n+3){border-top:1px solid var(--line)}
+  .two,.three{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+.btn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.dng{background:var(--bad,#b3261e);color:#fff;border-color:var(--bad,#b3261e)}
+.lockinfo{font-size:12.5px;color:var(--ink2)}
+dialog{border:1px solid var(--line2);border-radius:10px;padding:20px;max-width:min(440px,calc(100vw - 32px));background:var(--surface);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+dialog h3{margin:0 0 8px;font-size:16px}
+dialog p{margin:0 0 12px;font-size:13.5px;line-height:1.5;color:var(--ink2)}
+dialog input{width:100%;padding:8px 10px;border:1px solid var(--line2);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;margin-bottom:12px}
+dialog .row{display:flex;gap:8px;justify-content:flex-end}
+@media print{.bar,.foot .btns,.sample{display:none!important}}
+.nil{color:var(--mute)}
+.lnk{border:0;background:none;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit}
+.src{border:1px solid var(--line);border-radius:8px;padding:12px 16px;background:var(--surface);font-size:13px}
+.src summary{cursor:pointer;font-weight:600}
+.src ul{margin:10px 0;padding-left:18px}
+.src li{margin:4px 0}
+.src a{color:var(--accent)}
+#srcForm{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:8px}
+#srcForm .grow{flex:1 1 260px}
+#srcForm input{padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;width:100%}
+#srcYear{width:90px!important}
+.src .hint{color:var(--mute);margin:8px 0 0}
+.knote{font-size:11px;color:var(--mute);margin-top:4px;line-height:1.35;white-space:normal}
+.tnote{font-size:11px;color:var(--mute);font-weight:400;margin-top:2px;white-space:normal}
+#btnLock,.src{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="bar">
+    <div class="brand">Report Marketing V2 <i id="brandPlat">FACEBOOK</i></div>
+    <div class="seg" id="platSeg" role="group" aria-label="Platform"></div>
+    <div class="seg" id="typeSeg" role="group" aria-label="Jenis report"></div>
+    <label class="sel" id="selYearW" hidden>Tahun <select id="selYear"></select></label>
+    <label class="sel" id="selMonthW">Bulan <select id="selMonth"></select></label>
+    <label class="sel" id="selWeekW">Minggu <select id="selWeek"></select></label>
+    <label class="sel" id="selQW">Suku <select id="selQ"></select></label>
+    <div class="seg" id="cmpSeg" role="group" aria-label="Perbandingan"></div>
+  </div>
+
+  <div class="sample" id="banner"></div>
+
+  <header class="head">
+    <div>
+      <div class="eyebrow" id="hType"></div>
+      <h1 id="hTitle"></h1>
+      <div class="sub" id="hSub"></div>
+    </div>
+    <span class="state" id="hState"></span>
+  </header>
+
+  <section aria-label="Angka utama">
+    <div class="kpis" id="kpis"></div>
+    <div class="second" id="second"></div>
+  </section>
+
+  <section aria-label="Jadual">
+    <div class="secthead"><h2 id="tT"></h2><p id="tP"></p></div>
+    <div class="tw"><table id="tbl"></table></div>
+  </section>
+
+  <section class="two" aria-label="Rumusan">
+    <div><h2>Rumusan</h2><p id="sum"></p></div>
+    <div><h2>Cara baca</h2><div class="legend" id="legend"></div></div>
+  </section>
+
+  <section aria-label="Problem dan perancangan">
+    <div class="secthead"><h2>Catatan</h2><span class="nstate" id="noteState"></span></div>
+    <div class="three" id="notes"></div>
+  </section>
+
+  <details class="src">
+    <summary>Sumber data (Google Sheet ikut tahun)</summary>
+    <ul id="srcList"></ul>
+    <div id="srcForm" hidden>
+      <label class="sel">Tahun <input id="srcYear" type="number" min="2020" max="2100" value="2027" inputmode="numeric"></label>
+      <label class="sel grow">Link Google Sheet <input id="srcLink" type="url" placeholder="https://docs.google.com/spreadsheets/d/..."></label>
+      <button class="btn pri" type="button" data-act="srcadd">Simpan sumber</button>
+    </div>
+    <p class="hint" id="srcMsg"></p>
+    <p class="hint">Syarat: sheet boleh dibuka oleh akaun Google Drive kau; satu tab satu bulan bernama "JAN 27", "FEB 27" dan seterusnya; susun atur sama seperti CC5 (blok FACEBOOK, GOOGLE, TIKTOK; minggu di lajur C, E, G, I). <span id="srcNote"></span></p>
+  </details>
+
+  <div class="foot">
+    <span class="lockinfo" id="lockInfo">Sumber: Meta Ads Manager dan CC5.</span>
+    <div class="btns"><button class="btn" type="button" id="btnLock" data-act="lock" disabled>Kunci sebagai STATIC</button><button class="btn" type="button" data-act="print">Muat turun PDF</button></div>
+  </div>
+  <dialog id="dlg" aria-labelledby="dlgT"><h3 id="dlgT"></h3><p id="dlgP"></p><div id="dlgIn" hidden><input id="dlgTxt" autocomplete="off" aria-label="Taip BUKA untuk sahkan" placeholder="Taip BUKA"></div><div class="row"><button class="btn" type="button" data-act="dlgNo">Batal</button><button class="btn pri" type="button" id="dlgYes" data-act="dlgYes">Sahkan</button></div></dialog>
+</div>
+</div>
+
+<script>
+(function(){
+'use strict';
+/* ================= SUMBER DATA =================
+   Google Sheet "CC5 IMPORTEDDATA" (tab satu bulan satu tab).
+   Page baca setiap tab terus (live) dan ambil blok FACEBOOK, GOOGLE, TIKTOK.
+   Sel kosong dalam sheet = kosong dalam page. Tiada nombor direka.        */
+var DEFAULT_SOURCES=[{y:2026,id:'1g3d2iXZBRQnl9E8S9gLxDFI2eEfiTMtf7RPPYCatOQE'}];
+var SOURCES=DEFAULT_SOURCES.slice();
+/* Nama tab ikut bulan + 2 digit tahun, contoh "OKT 26", "JAN 27". Nama alternatif dicuba jika yang pertama tiada. */
+var MTAB=[['JAN'],['FEB'],['MAC','MAR'],['APRIL','APR'],['MEI','MAY'],['JUN'],['JULAI','JUL'],['OGOS','AUG'],['SEPT','SEP'],['OKT','OCT'],['NOV'],['DIS','DEC']];
+var SECT={FACEBOOK:'Facebook',GOOGLE:'Google',TIKTOK:'TikTok'};
+var YEAR=2026, SHEET_ID=SOURCES[0].id, TODAY=new Date();
+
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function f2(n){return Number(n).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});}
+var MN=['Jan','Feb','Mac','Apr','Mei','Jun','Julai','Ogos','Sept','Okt','Nov','Dis'];
+var MFULL=['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
+var MLEN=[31,28,31,30,31,30,31,31,30,31,30,31];
+var WR=['1–7','8–14','15–21','22–akhir'];
+var F=['lm','ls','intro','book','enrol','spend'];
+
+/* ---------- baca CSV ---------- */
+function parseCSV(t){
+  var rows=[],row=[],f='',q=false;
+  for(var i=0;i<t.length;i++){ var ch=t[i];
+    if(q){ if(ch==='"'){ if(t[i+1]==='"'){f+='"';i++;} else q=false; } else f+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===','){ row.push(f); f=''; }
+    else if(ch==='\n'||ch==='\r'){ if(ch==='\r'&&t[i+1]==='\n') i++; row.push(f); f=''; rows.push(row); row=[]; }
+    else f+=ch;
+  }
+  if(f!==''||row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+function cell(v){ /* sel kosong atau ralat = null */
+  if(v==null) return null; var t=String(v).trim(); if(t===''||t.charAt(0)==='#') return null;
+  t=t.replace(/RM/gi,'').replace(/[,\s]/g,''); if(/%$/.test(t)) return null;
+  var n=parseFloat(t); return isNaN(n)?null:n;
+}
+function isHeader(r){
+  var a=String(r[0]||'').trim(); if(!a||a.indexOf(':')>=0||/^RM/i.test(a)||!isNaN(parseFloat(a))) return false;
+  for(var c=1;c<=12;c++) if(String(r[c]||'').trim()!=='') return false;
+  return true;
+}
+/* Ambil nilai mingguan blok platform. Lajur minggu: C, E, G, I (indeks 2,4,6,8). */
+function parseMonth(text){
+  var rows=parseCSV(text), out={}, cur=null, blk=null;
+  rows.forEach(function(r){
+    if(isHeader(r)){
+      var h=String(r[0]).trim().toUpperCase(), key=null;
+      for(var k in SECT) if(h.indexOf(k)===0) key=SECT[k];
+      cur=(key&&!out[key])?key:null;
+      if(cur){ blk=[{},{},{},{}]; out[cur]=blk; }
+      return;
+    }
+    if(!cur) return;
+    var a=String(r[0]||'').trim().toLowerCase(), b=String(r[1]||'').trim().toLowerCase(), f=null;
+    if(a.indexOf('total marketer')===0) f='lm';
+    else if(a.indexOf('total team sales')===0) f='ls';
+    else if(b==='total ads spend') f='spend';
+    else if(a.indexOf('booking by week')===0) f='book';
+    else if(a.indexOf('intro class')===0) f='intro';
+    else if(a.indexOf('total enrollment')===0) f='enrol';
+    if(!f) return;
+    for(var w=0;w<4;w++) blk[w][f]=cell(r[2+w*2]);
+  });
+  return out;
+}
+
+/* ---------- simpanan ---------- */
+var RAW={}, PL=[], LOADED={}, LOCKS={}, DB=null, CAN=false, READY=false;
+var S={type:'mingguan',month:TODAY.getMonth()+1,week:0,q:1,cmp:true,plat:'Facebook'};
+var TXT={};
+function hasAny(v){ if(!v) return false; for(var i=0;i<F.length;i++) if(v[F[i]]!=null) return true; return false; }
+function rawLive(p,m,w){ var v=RAW[p]&&RAW[p][m]&&RAW[p][m][w]; return hasAny(v)?v:null; }
+function platsAll(){ return PL; }
+function platsFor(){ return S.plat==='ALL'?platsAll():[S.plat]; }
+function addV(a,b){ /* null + null = null (kekal kosong) */
+  if(!b) return a; if(!a){ var c={}; F.forEach(function(k){c[k]=b[k];}); return c; }
+  var o={}; F.forEach(function(k){ o[k]=(a[k]==null&&b[k]==null)?null:((a[k]||0)+(b[k]||0)); }); if(o.spend!=null) o.spend=Math.round(o.spend*100)/100; return o;
+}
+function liveW(m,w){ var r=null; platsFor().forEach(function(p){ r=addV(r,rawLive(p,m,w)); }); return r; }
+function lk(p,m,w){ return p.replace(/[^A-Za-z0-9]/g,'')+'_'+YEAR+'-'+m+'-'+(w+1); }
+function statW(m,w){ /* STATIC hanya wujud bila dikunci (atau diimport dari fail weekly) */
+  var r=null, any=false;
+  for(var i=0,ps=platsFor();i<ps.length;i++){ var p=ps[i]; if(!rawLive(p,m,w)) continue; any=true; var L=LOCKS[lk(p,m,w)]; if(!L) return null;
+    if(p==='Facebook'){ var mt=META[m+'-'+(w+1)]; if(mt){ L=Object.assign({},L,{spend:taxed(mt.spend),lm:mt.lm}); } }
+    r=addV(r,L); }
+  return any?r:null;
+}
+function weekEnd(m,w){ return new Date(YEAR,m-1,[7,14,21,MLEN[m-1]][w],23,59,59); }
+function closed(m,w){ return TODAY>weekEnd(m,w); }
+function monthsOfPeriod(){ return S.type==='tahunan'?[1,2,3,4,5,6,7,8,9,10,11,12]:(S.type==='suku'?[S.q*3-2,S.q*3-1,S.q*3]:[S.month]); }
+function weeksOfPeriod(){ var L=[]; monthsOfPeriod().forEach(function(m){ for(var w=0;w<4;w++){ if(S.type==='mingguan'&&w!==S.week) continue; L.push([m,w]); } }); return L; }
+function agg(fn,list){ var r=null; list.forEach(function(x){ r=addV(r,fn(x[0],x[1])); }); return r; }
+function aggStat(list){ /* STATIC tempoh = jumlah minggu; kosong kalau ada minggu berdata yang belum dikunci */
+  var r=null; for(var i=0;i<list.length;i++){ var m=list[i][0],w=list[i][1]; if(!liveW(m,w)) continue; var s=statW(m,w); if(!s) return null; r=addV(r,s); } return r;
+}
+function lastWeekWithData(){ for(var m=12;m>=1;m--) for(var w=3;w>=0;w--) if(liveW(m,w)) return [m,w]; return null; }
+function partialStat(list){ /* STATIC overall: jumlah minggu yang ada STATIC sahaja */
+  var r=null, have=0, total=0;
+  list.forEach(function(x){ if(!liveW(x[0],x[1])) return; total++; var s=statW(x[0],x[1]); if(s){ have++; r=addV(r,s); } });
+  return {stat:r,have:have,total:total};
+}
+function monthHas(m){ for(var w=0;w<4;w++) if(liveW(m,w)) return true; return false; }
+function maxMonth(){ var mx=0; for(var m=1;m<=12;m++) if(monthHas(m)) mx=m; return mx; }
+
+/* ---------- tempoh ---------- */
+function listFor(type,m,w,q){ if(type==='mingguan') return [[m,w]]; var ms=type==='tahunan'?[1,2,3,4,5,6,7,8,9,10,11,12]:(type==='suku'?[q*3-2,q*3-1,q*3]:[m]),L=[]; ms.forEach(function(mm){for(var i=0;i<4;i++) L.push([mm,i]);}); return L; }
+function period(){
+  var t=S.type,p={},L;
+  if(t==='mingguan'){
+    var m=S.month,w=S.week; L=listFor(t,m,w);
+    p.short='W'+(w+1)+' '+MN[m-1];
+    p.live=liveW(m,w); p.stat=aggStat(L);
+    var pm=w>0?m:m-1, pw=w>0?w-1:3;
+    if(pm>=1&&liveW(pm,pw)) p.prev={short:'W'+(pw+1)+' '+MN[pm-1],live:liveW(pm,pw),stat:aggStat([[pm,pw]])};
+  } else if(t==='bulanan'){
+    var mm=S.month; L=listFor(t,mm);
+    p.short=MN[mm-1]; p.live=agg(liveW,L); p.stat=aggStat(L);
+    if(mm>1&&monthHas(mm-1)){ var L2=listFor(t,mm-1); p.prev={short:MN[mm-2],live:agg(liveW,L2),stat:aggStat(L2)}; }
+  } else if(t==='tahunan'){
+    L=listFor(t); p.short='Overall '+YEAR; p.live=agg(liveW,L);
+    if(S.plat==='Facebook'){ var ps=partialStat(L); p.stat=ps.stat; p.statInfo=ps; } else { p.stat=null; p.statInfo=null; }
+  } else {
+    var q=S.q; L=listFor(t,0,0,q);
+    p.short='Q'+q; p.live=agg(liveW,L); p.stat=aggStat(L);
+    if(q>1){ var L3=listFor(t,0,0,q-1), lv=agg(liveW,L3); if(lv) p.prev={short:'Q'+(q-1),live:lv,stat:aggStat(L3)}; }
+  }
+  p.key=(S.plat==='ALL'?'DM':S.plat)+'_'+YEAR+'_'+(t==='mingguan'?'W'+S.month+'-'+(S.week+1):t==='bulanan'?'M'+S.month:t==='suku'?'Q'+S.q:'Y');
+  return p;
+}
+
+/* ---------- metric ---------- */
+var RG=[
+ {g:'Volume lead',rows:[{k:'lm',t:'Leads Marketer',dir:1},{k:'diff',t:'Perbezaan (Sales − Marketer)',dir:0},{k:'ls',t:'Leads Sales',dir:1}]},
+ {g:'Perjalanan sales',rows:[{k:'intro',t:'Intro',dir:1},{k:'book',t:'Booking',dir:1},{k:'enrol',t:'Enroll',dir:1},{k:'tc',t:'T. Conversion',dir:1}]},
+ {g:'Kos',rows:[{k:'spend',t:'Total Spend',dir:0,money:1},{k:'cplm',t:'CPL Marketer',dir:-1,money:1},{k:'cpls',t:'CPL Sales',dir:-1,money:1},{k:'cpp',t:'CPA / CPP',dir:-1,money:1}]},
+ {g:'Pulangan',rows:[{k:'roas',t:'ROAS x RM400 (anggaran)',dir:1,dec:2}]}
+];
+var ALL=[]; RG.forEach(function(g){g.rows.forEach(function(r){ALL.push(r);});});
+function byK(k){return ALL.filter(function(r){return r.k===k;})[0];}
+function div(a,b){ return (a==null||b==null||b===0)?null:a/b; }
+function rv(o,k){
+  if(!o) return null;
+  switch(k){
+    case 'diff': return (o.ls==null||o.lm==null)?null:o.ls-o.lm;
+    case 'tc': return (o.intro==null&&o.book==null&&o.enrol==null)?null:(o.intro||0)+(o.book||0)+(o.enrol||0);
+    case 'cplm': return div(o.spend,o.lm);
+    case 'cpls': return div(o.spend,o.ls);
+    case 'cpp': return div(o.spend,o.enrol);
+    case 'roas': return (o.enrol==null||!o.spend)?null:o.enrol*400/o.spend;
+    default: return o[k]==null?null:o[k];
+  }
+}
+function fmt(m,v){ if(v==null) return '<span class="nil">—</span>'; if(m.money) return 'RM '+f2(v); if(m.dec) return v.toFixed(m.dec); return Number(v).toLocaleString('en-MY'); }
+function pc(n,o){ if(o==null||n==null||o===0) return null; return (n-o)/o*100; }
+var UP='<svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9.2 8.5H.8Z" fill="currentColor"/></svg>';
+var DN='<svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 9 .8 1.5h8.4Z" fill="currentColor"/></svg>';
+function delta(m,n,o,suffix){
+  var c=pc(n,o);
+  if(c===null) return '<span class="dl flat">—</span>';
+  if(Math.abs(c)<0.05) return '<span class="dl flat">0.0%'+(suffix||'')+'</span>';
+  var up=c>0, good=m.dir===0?null:((c*m.dir)>0), cls=m.dir===0?'flat':(good?'up':'down');
+  return '<span class="dl '+cls+'">'+(up?UP:DN)+(up?'+':'')+c.toFixed(1)+'%'+(suffix||'')+'</span>';
+}
+function dAbs(a,b){ if(a==null||b==null) return '<span class="dl flat">—</span>'; var d=a-b; return '<span class="dl flat">'+(d>=0?'+':'')+d+'</span>'; }
+
+/* ---------- status ---------- */
+function dm(d){ return d.getDate()+' '+MN[d.getMonth()]; }
+function status(){
+  if(S.type==='tahunan'){ var lw=lastWeekWithData(); return lw?{t:'Sehingga W'+(lw[1]+1)+' '+MN[lw[0]-1]+(closed(lw[0],lw[1])?'':' (berjalan)'),open:!closed(lw[0],lw[1])}:{t:'Tiada data',open:false}; }
+  var end, list=weeksOfPeriod();
+  end=weekEnd(list[list.length-1][0],list[list.length-1][1]);
+  if(TODAY>end) return {t:'Tempoh tamat · LIVE terus dikemas kini',open:false};
+  var nx=new Date(end.getTime()+1000);
+  return {t:'Sedang berjalan · report keluar '+dm(nx),open:true};
+}
+function range(){
+  if(S.type==='mingguan'){ var m=S.month,w=S.week; return [1,8,15,22][w]+'–'+[7,14,21,MLEN[m-1]][w]+' '+MN[m-1]+' '+YEAR; }
+  if(S.type==='bulanan') return '1–'+MLEN[S.month-1]+' '+MN[S.month-1]+' '+YEAR;
+  if(S.type==='tahunan'){ var lw=lastWeekWithData(); if(!lw) return ''; return '1 Jan – '+[7,14,21,MLEN[lw[0]-1]][lw[1]]+' '+MN[lw[0]-1]+' '+YEAR; }
+  var q=S.q; return '1 '+MN[q*3-3]+' – '+MLEN[q*3-1]+' '+MN[q*3-1]+' '+YEAR;
+}
+function spendNote(){ return S.plat==='Facebook'?'Rujuk Ads Manager (Meta) · MO2 + MO4 + MO05 · termasuk 8% cukai':S.plat==='ALL'?'Facebook: Ads Manager + 8% cukai · Google & TikTok: CC5':'Dari CC5'; }
+var PLN=function(p){return p==='ALL'?'Digital Marketing (Facebook + Google + TikTok)':p;};
+
+/* ---------- bar ---------- */
+function renderBar(){
+  var pl=['Facebook'].concat(PL.filter(function(p){return p!=='Facebook';})).concat(['ALL']);
+  $('platSeg').innerHTML=pl.map(function(p){return '<button type="button" data-act="plat" data-v="'+esc(p)+'" aria-pressed="'+(S.plat===p)+'">'+esc(p==='ALL'?'Digital Marketing':p)+'</button>';}).join('');
+  $('brandPlat').textContent=S.plat==='ALL'?'DIGITAL MARKETING':String(S.plat).toUpperCase();
+  var ys=SOURCES.map(function(x){return x.y;}).sort();
+  $('selYearW').hidden=ys.length<2;
+  $('selYear').innerHTML=ys.map(function(y){return '<option value="'+y+'"'+(y===YEAR?' selected':'')+'>'+y+'</option>';}).join('');
+  $('typeSeg').innerHTML=[['mingguan','Mingguan'],['bulanan','Bulanan'],['suku','Suku tahun'],['tahunan','Overall tahun']].map(function(x){return '<button type="button" data-act="type" data-v="'+x[0]+'" aria-pressed="'+(S.type===x[0])+'">'+x[1]+'</button>';}).join('');
+  $('selMonthW').hidden=(S.type==='suku'||S.type==='tahunan'); $('selWeekW').hidden=(S.type!=='mingguan'); $('selQW').hidden=(S.type!=='suku');
+  var o='', mx=maxMonth();
+  for(var m=1;m<=mx;m++) o+='<option value="'+m+'"'+(S.month===m?' selected':'')+(monthHas(m)?'':' disabled')+'>'+MFULL[m-1]+(monthHas(m)?'':' (tiada data)')+'</option>';
+  $('selMonth').innerHTML=o;
+  var w='';
+  for(var i=0;i<4;i++){ var has=!!liveW(S.month,i); w+='<option value="'+i+'"'+(S.week===i?' selected':'')+(has?'':' disabled')+'>W'+(i+1)+' ('+WR[i]+')'+(has?(closed(S.month,i)?'':' · berjalan'):' · tiada data')+'</option>'; }
+  $('selWeek').innerHTML=w;
+  var q='';
+  for(var j=1;j<=4;j++){ var hq=monthHas(j*3-2)||monthHas(j*3-1)||monthHas(j*3); q+='<option value="'+j+'"'+(S.q===j?' selected':'')+(hq?'':' disabled')+'>Q'+j+(hq?'':' · tiada data')+'</option>'; }
+  $('selQ').innerHTML=q;
+  $('cmpSeg').innerHTML='<button type="button" data-act="cmp" data-v="1" aria-pressed="'+S.cmp+'">Banding sebelum</button><button type="button" data-act="cmp" data-v="0" aria-pressed="'+(!S.cmp)+'">Tempoh ni sahaja</button>';
+}
+
+/* ---------- render ---------- */
+function render(){
+  if(!READY) return;
+  renderBar();
+  var P=period(), c=P.live, hasPrev=!!P.prev, cmp=S.cmp&&hasPrev, st=status();
+  $('hType').textContent={mingguan:'Report mingguan',bulanan:'Report bulanan',suku:'Report suku tahun',tahunan:'Report overall tahun'}[S.type]+' · '+PLN(S.plat);
+  $('hTitle').textContent=S.type==='mingguan'?'W'+(S.week+1)+' '+MFULL[S.month-1]+' '+YEAR:S.type==='bulanan'?MFULL[S.month-1]+' '+YEAR:S.type==='tahunan'?'Overall '+YEAR:'Suku '+S.q+' '+YEAR;
+  $('hSub').textContent=range();
+  var hs=$('hState'); hs.textContent=st.t; hs.className='state'+(st.open?' open':'');
+
+  /* banding: guna STATIC tempoh sebelum; kalau belum dikunci, guna LIVE dan label jelas */
+  var base=null, baseLbl='';
+  if(cmp){ if(P.prev.stat){ base=P.prev.stat; baseLbl=' vs '+P.prev.short+' STATIC'; } else { base=P.prev.live; baseLbl=' vs '+P.prev.short+' LIVE'; } }
+  var prim=[['Leads Sales','ls'],['Total Spend','spend'],['Enroll','enrol'],['CPA / CPP','cpp']];
+  $('kpis').innerHTML=prim.map(function(p){
+    var m=byK(p[1]), d=cmp?delta(m,rv(c,p[1]),rv(base,p[1]),esc(baseLbl)):'<span class="dl flat"></span>';
+    return '<div class="kpi"><div class="eyebrow">'+p[0]+'</div><div class="v">'+fmt(m,rv(c,p[1]))+'</div><div class="d">'+d+'</div>'+(p[1]==='spend'?'<div class="knote">'+esc(spendNote())+'</div>':'')+'</div>';
+  }).join('');
+  var sec=[['Leads Marketer','lm'],['CPL Sales','cpls'],['Intro','intro'],['Booking','book'],['T. Conversion','tc'],['ROAS x RM400','roas']];
+  $('second').innerHTML=sec.map(function(p){var m=byK(p[1]);return '<div><span class="eyebrow">'+p[0]+'</span><b>'+fmt(m,rv(c,p[1]))+'</b></div>';}).join('');
+
+  var head,body='';
+  if(cmp){
+    var pv=P.prev;
+    $('tT').textContent=P.short+' lawan '+pv.short;
+    $('tP').textContent=pv.stat?'Angka semasa dibanding dengan STATIC '+pv.short:'STATIC '+pv.short+' belum dikunci, jadi banding dengan LIVE '+pv.short;
+    head='<thead><tr><th class="l">Metric</th><th>'+esc(pv.short)+' LIVE</th><th>Beza</th><th>'+esc(pv.short)+' STATIC</th><th>Beza</th><th class="cur">'+esc(P.short)+' LIVE</th><th>'+esc(P.short)+' STATIC</th></tr></thead>';
+    RG.forEach(function(g){
+      body+='<tr class="g"><td colspan="7">'+g.g+'</td></tr>';
+      g.rows.forEach(function(m){
+        var a=rv(pv.live,m.k),b=rv(pv.stat,m.k),d=rv(c,m.k),e=rv(P.stat,m.k),ref=(b==null?a:b),c1,c2;
+        if(m.k==='diff'){ c1=dAbs(a,b); c2=dAbs(d,ref); } else { c1=delta(m,a,b); c2=delta(m,d,ref); }
+        body+='<tr><td class="l">'+m.t+(m.k==='spend'?'<div class="tnote">'+esc(spendNote())+'</div>':'')+'</td><td>'+fmt(m,a)+'</td><td>'+c1+'</td><td>'+fmt(m,b)+'</td><td>'+c2+'</td><td class="cur">'+fmt(m,d)+'</td><td>'+fmt(m,e)+'</td></tr>';
+      });
+    });
+  } else {
+    $('tT').textContent=P.short;
+    var stH='STATIC';
+    if(S.type==='tahunan'){
+      if(P.statInfo){ stH='STATIC ('+P.statInfo.have+'/'+P.statInfo.total+' minggu)'; $('tP').textContent='LIVE: 1 Jan hingga minggu terkini. STATIC: jumlah minggu yang ada STATIC sahaja ('+P.statInfo.have+' daripada '+P.statInfo.total+' minggu), jadi tidak setara dengan LIVE.'; }
+      else $('tP').textContent='LIVE: 1 Jan hingga minggu terkini. STATIC overall hanya untuk Facebook.';
+    } else $('tP').textContent=hasPrev?'Tukar ke "Banding sebelum" untuk lihat '+P.short+' lawan '+P.prev.short:'Tiada tempoh sebelum';
+    head='<thead><tr><th class="l">Metric</th><th class="cur">LIVE</th><th>'+stH+'</th></tr></thead>';
+    RG.forEach(function(g){
+      body+='<tr class="g"><td colspan="3">'+g.g+'</td></tr>';
+      g.rows.forEach(function(m){ body+='<tr><td class="l">'+m.t+(m.k==='spend'?'<div class="tnote">'+esc(spendNote())+'</div>':'')+'</td><td class="cur">'+fmt(m,rv(c,m.k))+'</td><td>'+fmt(m,rv(P.stat,m.k))+'</td></tr>'; });
+    });
+  }
+  $('tbl').innerHTML=head+'<tbody>'+body+'</tbody>';
+
+  var blanks=[]; if(c) [['lm','Leads Marketer'],['ls','Leads Sales'],['intro','Intro'],['book','Booking'],['enrol','Enroll'],['spend','Spend']].forEach(function(x){ if(c[x[0]]==null) blanks.push(x[1]); });
+  var s1;
+  if(!c) s1='Tiada data untuk tempoh ini dalam sheet.';
+  else if(cmp){
+    var better=0,worse=0;
+    ALL.forEach(function(m){ if(!m.dir) return; var x=pc(rv(c,m.k),rv(base,m.k)); if(x===null) return; if(x*m.dir>0) better++; else if(x*m.dir<0) worse++; });
+    s1=P.short+' lebih baik daripada '+P.prev.short+(P.prev.stat?' STATIC':' LIVE')+' pada '+better+' metric dan lebih lemah pada '+worse+'.';
+  } else s1=P.short+': '+(c.ls==null?'—':c.ls.toLocaleString('en-MY'))+' Leads Sales, '+(c.enrol==null?'—':c.enrol)+' Enroll, Total Spend '+(c.spend==null?'—':'RM '+f2(c.spend))+'.';
+  if(blanks.length) s1+=' Belum diisi dalam sheet: '+blanks.join(', ')+'.';
+  $('sum').textContent=s1;
+  $('legend').innerHTML='<span>Facebook: Total Spend diambil dari Meta Ads Manager (Minda Optima 2 + Minda Optima 4 + Minda Optima 05) ikut tarikh minggu, kemudian ditambah 8% cukai. Leads Marketer = jumlah result WhatsFormSubmit + Website leads + Messaging conversation started (campaign awareness/engagement post tidak dikira).</span><span>Google, TikTok dan angka sales (Leads Sales, Intro, Booking, Enroll) dari Google Sheet CC5. Digital Marketing = Facebook (Meta) + Google + TikTok (CC5).</span><span>LIVE: angka semasa. Berubah bila sheet atau Meta dikemas kini.</span><span>STATIC: angka yang dikunci pada hari report dibentang. Kosong selagi belum dikunci.</span><span>— bermaksud sel itu kosong dalam sheet. Page tidak mengisi atau meneka nombor.</span><span>Hijau lebih baik, merah lebih lemah. CPL dan CPP lebih murah lebih baik. ROAS = Enroll × RM400 ÷ Total Spend.</span>';
+  renderNotes(P);
+  updLock();
+}
+
+/* ---------- catatan (disimpan dalam page) ---------- */
+var NOTES={}, NKEY=null, NTIMER=null, NPEND=null;
+var NDEF=[
+ {f:'p',t:'Problem',sub:'Apa yang tak kena minggu/bulan ini',ic:'<path d="M12 3 2 21h20L12 3Z"/><path d="M12 10v5"/><circle cx="12" cy="18" r=".6" fill="currentColor"/>',ph:'Contoh: CPL naik sebab frequency tinggi pada adset FWR'},
+ {f:'a',t:'Action dilakukan',sub:'Apa yang dah dibuat',ic:'<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16.5 9"/>',ph:'Contoh: tutup 3 ads CPL > RM55, tambah 2 creative baru'},
+ {f:'n',t:'Perancangan seterusnya',sub:'Langkah untuk tempoh depan',ic:'<path d="M4 12h14"/><path d="m13 6 6 6-6 6"/>',ph:'Contoh: uji hook testimoni, pantau CPP W3'}
+];
+function grow(t){ t.style.height='auto'; t.style.height=Math.max(t.scrollHeight+2,120)+'px'; }
+function noteStatus(txt,cls){ var e=$('noteState'); if(e){ e.textContent=txt; e.className='nstate'+(cls?' '+cls:''); } }
+function renderNotes(P){
+  NKEY=P.key; var tx=NOTES[P.key]||{}, ro=!(DB&&CAN);
+  $('notes').innerHTML=NDEF.map(function(d,i){
+    return '<div class="note n-'+d.f+'"><div class="nh"><span class="ni" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+d.ic+'</svg></span><div><div class="nt">'+d.t+'</div><div class="ns">'+d.sub+'</div></div></div>'
+      +'<textarea data-f="'+d.f+'" aria-label="'+d.t+'" placeholder="'+(ro?'Belum diisi':d.ph)+'"'+(ro?' readonly':'')+'>'+esc(tx[d.f]||'')+'</textarea></div>';
+  }).join('');
+  Array.prototype.forEach.call(document.querySelectorAll('#notes textarea'),grow);
+  if(ro) noteStatus(tx.at?'Dikemas kini '+fmtAt(tx.at):'Belum ada catatan');
+  else noteStatus(tx.at?'Disimpan '+fmtAt(tx.at):'Belum ada catatan','');
+}
+function fmtAt(a){ return new Date(a).toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); }
+function queueSave(){
+  if(!DB||!CAN||!NKEY) return;
+  var key=NKEY, o={key:key};
+  Array.prototype.forEach.call(document.querySelectorAll('#notes textarea'),function(t){ o[t.getAttribute('data-f')]=t.value; });
+  NPEND=o; noteStatus('Menyimpan…','busy');
+  clearTimeout(NTIMER); NTIMER=setTimeout(flushSave,900);
+}
+function flushSave(){
+  if(!NPEND) return; var o=NPEND; NPEND=null; o.at=new Date().toISOString();
+  NOTES[o.key]=o;
+  DB.collection('notes').doc(o.key).set(o).then(function(){ if(NKEY===o.key&&!NPEND) noteStatus('Disimpan '+fmtAt(o.at),'ok'); })
+    .catch(function(e){ noteStatus('Gagal simpan, cuba lagi','err'); });
+}
+function onNotesSnap(snap){
+  snap.docs.forEach(function(d){ NOTES[d.id]=d.data(); });
+  if(!READY||!NKEY) return;
+  var tx=NOTES[NKEY]||{}, act=document.activeElement;
+  Array.prototype.forEach.call(document.querySelectorAll('#notes textarea'),function(t){
+    if(t===act||NPEND) return; var v=tx[t.getAttribute('data-f')]||''; if(t.value!==v){ t.value=v; grow(t); }
+  });
+}
+
+/* ---------- kunci STATIC ---------- */
+function lockTargets(){ /* [p,m,w] minggu yang dah tutup dan ada data */
+  var L=[];
+  weeksOfPeriod().forEach(function(x){ if(!closed(x[0],x[1])) return; platsFor().forEach(function(p){ if(rawLive(p,x[0],x[1])) L.push([p,x[0],x[1]]); }); });
+  return L;
+}
+function lockState(){ var L=lockTargets(), n=0; L.forEach(function(x){ if(LOCKS[lk(x[0],x[1],x[2])]) n++; }); return {total:L.length,locked:n,list:L}; }
+function updLock(){
+  var b=$('btnLock'), li=$('lockInfo'), st=lockState(), open=weeksOfPeriod().some(function(x){return !closed(x[0],x[1]);});
+  b.className='btn';
+  if(S.type==='tahunan'){ b.disabled=true; b.textContent='Kunci sebagai STATIC'; li.textContent='Kunci STATIC dibuat ikut minggu. Pilih Mingguan, Bulanan atau Suku tahun untuk kunci.'; return; }
+  if(!DB){ b.disabled=true; li.textContent=(st.total?(st.locked?'STATIC terkunci '+st.locked+' daripada '+st.total+'.':'STATIC belum dikunci.'):(open?'Minggu ini belum tamat.':''))+' Paparan public (baca sahaja). Kunci dan catatan diurus dalam Report Marketing V2.'; return; }
+  if(!CAN){ b.disabled=true; b.textContent=st.locked?'STATIC terkunci':'Kunci sebagai STATIC'; li.textContent='Hanya editor boleh kunci atau buka kunci.'; return; }
+  if(!st.total){ b.disabled=true; b.textContent='Kunci sebagai STATIC'; li.textContent=open?'Minggu ini belum tamat. Kunci STATIC boleh dibuat selepas minggu tutup.':'Tiada data untuk dikunci.'; return; }
+  b.disabled=false;
+  if(st.locked===st.total){ b.textContent='Buka kunci STATIC'; b.className='btn dng'; }
+  else { b.textContent=st.locked?'Kunci baki ('+(st.total-st.locked)+')':'Kunci sebagai STATIC'; b.className='btn pri'; }
+  var when='', imp=''; st.list.forEach(function(x){var d=LOCKS[lk(x[0],x[1],x[2])]; if(d&&d.at&&(!when||d.at>when)) when=d.at; if(d&&d.src) imp=d.src;});
+  li.textContent=(st.locked?('STATIC terkunci '+st.locked+' daripada '+st.total+(st.total>1?' (platform × minggu)':'')+(when?' · '+new Date(when).toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'')+'.'):'STATIC belum dikunci.')+(imp?' Sumber STATIC: '+imp+'.':'')+(open?' Minggu yang belum tamat tidak dikunci.':'');
+}
+var PEND=null;
+function ask(title,text,needType,yesLabel,yesCls,fn){
+  $('dlgT').textContent=title; $('dlgP').textContent=text; $('dlgIn').hidden=!needType; $('dlgTxt').value='';
+  var y=$('dlgYes'); y.textContent=yesLabel; y.className='btn '+yesCls; y.disabled=!!needType; PEND=fn; $('dlg').showModal();
+}
+function doLock(){
+  var st=lockState(), now=new Date().toISOString(), ops=[];
+  st.list.forEach(function(x){ var k=lk(x[0],x[1],x[2]); if(LOCKS[k]) return; var v=rawLive(x[0],x[1],x[2]), d={p:x[0],y:YEAR,m:x[1],w:x[2]+1,at:now};
+    F.forEach(function(f){ d[f]=v[f]==null?null:v[f]; });
+    ops.push(DB.collection('locks').doc(k).set(d));
+    ops.push(DB.collection('locklog').doc().set({key:k,action:'kunci',at:now})); });
+  return Promise.all(ops);
+}
+function doUnlock(){
+  var st=lockState(), now=new Date().toISOString(), ops=[];
+  st.list.forEach(function(x){ var k=lk(x[0],x[1],x[2]); if(!LOCKS[k]) return;
+    ops.push(DB.collection('locklog').doc().set({key:k,action:'buka kunci',at:now,lama:LOCKS[k]}));
+    ops.push(DB.collection('locks').doc(k).delete()); });
+  if(S.plat==='ALL'){ var seen={}; st.list.forEach(function(x){ var ka=lk('ALL',x[1],x[2]); if(seen[ka]||!LOCKS[ka]) return; seen[ka]=1;
+    ops.push(DB.collection('locklog').doc().set({key:ka,action:'buka kunci',at:now,lama:LOCKS[ka]}));
+    ops.push(DB.collection('locks').doc(ka).delete()); }); }
+  return Promise.all(ops);
+}
+function onLockBtn(){
+  var st=lockState(); if(!st.total) return; var P=period();
+  if(st.locked===st.total) ask('Buka kunci STATIC '+P.short+'?','STATIC '+P.short+' akan dipadam. Kalau kunci semula, STATIC ambil angka LIVE pada masa itu dan mungkin berbeza. Tindakan ini dicatat dalam log.',true,'Buka kunci','dng',doUnlock);
+  else ask('Kunci STATIC '+P.short+'?','Angka LIVE sekarang akan disimpan sebagai STATIC dan tidak berubah lagi. Sel kosong kekal kosong. Buka kunci kemudian perlu pengesahan.',false,'Kunci sekarang','pri',doLock);
+}
+
+/* ---------- muat data ---------- */
+function setBanner(msg){ $('banner').innerHTML=msg; }
+var XLSX_URL='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+function loadXlsxLib(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise(function(ok,no){ var sc=document.createElement('script'); sc.src=XLSX_URL; sc.onload=function(){ok(window.XLSX);}; sc.onerror=function(){no(new Error('gagal muat pembaca Excel'));}; document.head.appendChild(sc); });
+}
+function b64ToBytes(b64){ var bin=atob(b64), n=bin.length, u=new Uint8Array(n); for(var i=0;i<n;i++) u[i]=bin.charCodeAt(i); return u; }
+var MCP=null;
+function fetchWorkbook(){
+  /* Baca sheet melalui Google Drive kau (connector), eksport sebagai Excel: semua tab, angka terkini. */
+  return (window.claude&&window.claude.use?window.claude.use('mcp'):Promise.resolve(null)).then(function(m){
+    MCP=m; if(!m) throw {code:'no_mcp'};
+    return Promise.all([loadXlsxLib(), m.callTool('Google Drive','download_file_content',{fileId:SHEET_ID,exportMimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'},{cache:false})]);
+  }).then(function(r){
+    var X=r[0], res=r[1], p=res&&res.payload, b64=null;
+    if(p&&typeof p==='object') b64=(typeof p.content==='string'?p.content:null)||p.fileContent||(typeof p.data==='string'?p.data:null)||null;
+    if(!b64&&res&&res.content) res.content.forEach(function(c){ if(b64||!c) return; if(c.resource&&c.resource.blob) b64=c.resource.blob; else if(c.type==='blob'&&c.data) b64=c.data; else if(c.blob) b64=c.blob; });
+    if(!b64&&res&&res.content) res.content.forEach(function(c){ if(!b64&&c&&c.type==='text'){ try{ var j=JSON.parse(c.text); b64=j.content||null; }catch(e){} } });
+    if(!b64) throw new Error('fail Google Drive kosong');
+    return X.read(b64ToBytes(b64),{type:'array'});
+  });
+}
+function errText(e){
+  var c=e&&e.code;
+  if(c==='no_mcp') return 'Page ini perlu kebenaran Google Drive. Buka dalam Claude (log masuk) dan benarkan Google Drive bila ditanya.';
+  if(c==='not_granted'||c==='denied'||c==='consent_denied') return 'Kebenaran Google Drive ditolak. Benarkan Google Drive untuk page ini, kemudian muat semula.';
+  if(c==='server_not_connected'||c==='not_connected') return 'Connector (Google Drive atau Meta Ads) belum disambung pada akaun Claude kau. Sambung connector itu, kemudian muat semula.';
+  return (e&&e.message)?e.message:'ralat tidak diketahui'+(c?' ('+c+')':'');
+}
+function loadAll(){
+  var lastM=TODAY.getFullYear()>YEAR?12:(TODAY.getFullYear()<YEAR?0:TODAY.getMonth()+1);
+  READY=false; RAW={}; PL=[];
+  setBanner('Memuatkan data dari Google Sheet…');
+  return fetchWorkbook().then(function(wb){
+    var X=window.XLSX, yy=String(YEAR).slice(2), got=0, miss=[];
+    var names={}; wb.SheetNames.forEach(function(n){ names[n.trim().toUpperCase().replace(/\s+/g,' ')]=n; });
+    for(var m=1;m<=lastM;m++){
+      var tab=null; MTAB[m-1].forEach(function(b){ var k=(b+' '+yy).toUpperCase(); if(!tab&&names[k]) tab=names[k]; });
+      if(!tab){ miss.push(MN[m-1]); continue; }
+      var d=parseMonth(X.utils.sheet_to_csv(wb.Sheets[tab],{blankrows:true})), any=false;
+      for(var p in d){ if(PL.indexOf(p)<0) PL.push(p); RAW[p]=RAW[p]||{}; RAW[p][m]=d[p]; any=true; }
+      if(any){ got++; LOADED[m]=tab; } else miss.push(MN[m-1]);
+    }
+    PL.sort(function(a,b){ return ['Facebook','Google','TikTok'].indexOf(a)-['Facebook','Google','TikTok'].indexOf(b); });
+    if(!got) throw new Error('tiada tab '+YEAR+' dijumpai (nama tab mesti seperti "JAN '+yy+'")');
+    READY=true;
+    SHEETB=('<b>LIVE</b> · Google Sheet '+YEAR+' · dimuat '+new Date().toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+(miss.length?' · tab tiada: '+esc(miss.join(', ')):'')+' · <button type="button" class="lnk" data-act="reload">Muat semula</button>'); setBanner(SHEETB);
+  });
+}
+/* ---------- Meta Ads (Facebook: Total Spend + Leads Marketer) ----------
+   Dibaca melalui connector Meta Ads pemilik: setiap minggu (1–7, 8–14, 15–21, 22–akhir),
+   peringkat campaign, akaun Minda Optima 2 + Minda Optima 4. Disimpan dalam page supaya
+   orang lain nampak tanpa akses Meta. Minggu lama tidak diambil semula (angka Meta tetap). */
+var META_ACC=[{id:'863467445706037',n:'MO2'},{id:'4603088879971972',n:'MO4'},{id:'28873619612279525',n:'MO05'}];
+var TAX=1.08, META_VER='v3';  /* v3: MO2+MO4+MO05; lead = WhatsFormSubmit + website leads + mesej */
+var META={}, META_AT=null, META_NOTE='', SHEETB='';
+var CCID=(function(){ var c='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',s=''; for(var i=0;i<20;i++) s+=c.charAt(Math.floor(Math.random()*62)); return s; })();
+function ymd(y,m,d){ return y+'-'+(m<10?'0':'')+m+'-'+(d<10?'0':'')+d; }
+function isLeadInd(ind){ return /WhatsFormSubmit|fb_pixel_lead|messaging_conversation_started/i.test(String(ind||'')); }
+function taxed(v){ return v==null?null:Math.round(v*TAX*100)/100; }
+function metaCall(acc,since,until,cursor){
+  var args={ad_account_id:acc,level:'campaign',fields:['name','amount_spent','results'],time_range:JSON.stringify({since:since,until:until}),
+    filtering:[{field:'amount_spent',operator:'GREATER_THAN',value:['0']}],include_additional_context:false,reporting_purpose:['metric_lookup'],
+    advertiser_job:'report_measure_or_look_up',client_conversation_id:CCID,limit:200};
+  if(cursor) args.cursor=cursor;
+  return MCP.callTool('Meta Ads','ads_get_ad_entities',args,{cache:false}).then(function(res){
+    var p=res&&res.payload;
+    if((!p||typeof p!=='object')&&res&&res.content) res.content.forEach(function(c){ if(!p&&c&&c.type==='text'){ try{ p=JSON.parse(c.text); }catch(e){} } });
+    if(!p) throw new Error('jawapan Meta kosong');
+    if(p.client_conversation_id) CCID=p.client_conversation_id;
+    var rows=p.ad_entities; if(typeof rows==='string'){ try{ rows=JSON.parse(rows); }catch(e){ rows=[]; } }
+    rows=rows||[]; var spend=0, leads=0;
+    rows.forEach(function(r){
+      var sp=parseFloat(r.amount_spent&&r.amount_spent.value); if(!isNaN(sp)) spend+=sp;
+      var R=r.results; if(R&&isLeadInd(R.indicator)&&R.values&&R.values[0]){ var v=parseFloat(R.values[0].value); if(!isNaN(v)) leads+=v; }
+    });
+    var nx=p.pagination&&p.pagination.next_cursor;
+    if(nx) return metaCall(acc,since,until,nx).then(function(more){ return {spend:spend+more.spend,leads:leads+more.leads}; });
+    return {spend:spend,leads:leads};
+  });
+}
+function metaWeek(m,w){
+  var s=[1,8,15,22][w], e=[7,14,21,MLEN[m-1]][w], until=new Date(YEAR,m-1,e);
+  if(until>TODAY) until=TODAY;
+  var since=ymd(YEAR,m,s), un=ymd(until.getFullYear(),until.getMonth()+1,until.getDate());
+  return Promise.all(META_ACC.map(function(a){ return metaCall(a.id,since,un); })).then(function(rs){
+    var o={spend:0,lm:0,acc:{},at:new Date().toISOString(),until:un};
+    rs.forEach(function(r,i){ o.spend+=r.spend; o.lm+=r.leads; o.acc[META_ACC[i].n]={spend:Math.round(r.spend*100)/100,lm:r.leads}; });
+    o.spend=Math.round(o.spend*100)/100; return o;
+  });
+}
+function metaDoc(){ return DB.collection('meta').doc(String(YEAR)); }
+function loadMetaCache(){
+  if(!DB) return Promise.resolve();
+  return metaDoc().get().then(function(d){ if(d&&d.exists){ var x=d.data(); if(x.ver===META_VER){ META=x.weeks||{}; META_AT=x.at||null; } else { META={}; META_AT=null; } } }).catch(function(){});
+}
+function loadMeta(){
+  /* pemilik sahaja: ambil minggu yang belum ada atau yang tamat dalam 10 hari lepas */
+  if(!MCP) return Promise.resolve();
+  var lastM=TODAY.getFullYear()>YEAR?12:(TODAY.getFullYear()<YEAR?0:TODAY.getMonth()+1), jobs=[], recent=new Date(TODAY.getTime()-10*86400000);
+  for(var m=1;m<=lastM;m++) for(var w=0;w<4;w++){
+    var start=new Date(YEAR,m-1,[1,8,15,22][w]); if(start>TODAY) continue;
+    var k=m+'-'+(w+1), end=weekEnd(m,w);
+    if(!META[k]||end>=recent) jobs.push([m,w]);
+  }
+  if(!jobs.length) return Promise.resolve();
+  var i=0, done=0, fail=0;
+  function worker(){
+    if(i>=jobs.length) return Promise.resolve();
+    var j=jobs[i++];
+    return metaWeek(j[0],j[1]).then(function(o){ META[j[0]+'-'+(j[1]+1)]=o; },function(){ fail++; })
+      .then(function(){ done++; setBanner('Mengambil data Meta Ads… '+done+'/'+jobs.length+' minggu'); return worker(); });
+  }
+  return Promise.all([worker(),worker(),worker()]).then(function(){
+    META_AT=new Date().toISOString();
+    if(fail) META_NOTE=fail+' minggu gagal diambil dari Meta';
+    if(DB&&CAN) return metaDoc().set({y:YEAR,ver:META_VER,tax:TAX,at:META_AT,acc:META_ACC.map(function(a){return a.n;}),weeks:META}).catch(function(){});
+  });
+}
+function applyMeta(){
+  if(!RAW.Facebook) return;
+  for(var k in META){ var p=k.split('-'), m=+p[0], w=+p[1]-1, mt=META[k];
+    RAW.Facebook[m]=RAW.Facebook[m]||[{},{},{},{}]; var v=RAW.Facebook[m][w]=RAW.Facebook[m][w]||{};
+    v.spend=taxed(mt.spend); v.lm=mt.lm; }
+}
+function metaBanner(){ return META_AT?' · Meta Ads (MO2 + MO4 + MO05, +8% cukai) dikemas kini '+new Date(META_AT).toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+(META_NOTE?' · <b>'+esc(META_NOTE)+'</b>':''):' · <b>Data Meta belum ada: Total Spend dan Leads Marketer Facebook masih dari CC5</b>'; }
+
+/* ---------- salinan data untuk penonton lain ----------
+   Pemilik/editor baca Google Drive terus dan simpan salinan dalam page.
+   Orang lain baca salinan ini, jadi mereka tak perlu Google Drive. */
+function cacheDoc(){ return DB.collection('cache').doc(String(YEAR)); }
+function saveCache(){
+  if(!DB||!CAN||!READY) return;
+  var raw={}; PL.forEach(function(p){ raw[p]={}; for(var m in RAW[p]) raw[p][m]=RAW[p][m].map(function(w){ var o={}; F.forEach(function(k){ o[k]=(w&&w[k]!=null)?w[k]:null; }); return o; }); });
+  cacheDoc().set({y:YEAR,at:new Date().toISOString(),pl:PL,raw:raw}).catch(function(){});
+}
+function loadCache(){
+  if(!DB) return Promise.reject(new Error('perlu log masuk Claude untuk lihat data'));
+  return cacheDoc().get().then(function(d){
+    if(!d||!d.exists) throw new Error('belum ada salinan data. Pemilik perlu buka page ini sekali');
+    var x=d.data(); RAW={}; PL=(x.pl||[]).slice();
+    PL.forEach(function(p){ RAW[p]={}; var src=(x.raw||{})[p]||{}; for(var m in src) RAW[p][+m]=src[m]; });
+    READY=true;
+    SHEETB=('<b>LIVE</b> · Google Sheet '+YEAR+' · dikemas kini '+new Date(x.at).toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' · <button type="button" class="lnk" data-act="reload">Muat semula</button>'); setBanner(SHEETB);
+  });
+}
+function loadData(){
+  /* Versi public: baca snapshot data.json (dijana setiap hari dari CC5 + Meta Ads + kunci/catatan V2) */
+  setBanner('Memuatkan data…');
+  return fetch('data.json?t='+Date.now(),{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('data.json HTTP '+r.status); return r.json(); }).then(function(x){
+    YEAR=x.y; RAW={}; PL=(x.pl||[]).slice();
+    PL.forEach(function(p){ RAW[p]={}; var src=(x.raw||{})[p]||{}; for(var m in src) RAW[p][+m]=src[m].map(function(w){ return Object.assign({},w); }); });
+    META=(x.meta&&x.meta.weeks)||{}; META_AT=(x.meta&&x.meta.at)||null; LOCKS=x.locks||{}; NOTES=x.notes||{};
+    applyMeta(); READY=true;
+    SHEETB='<b>LIVE</b> · CC5 '+YEAR+' · snapshot '+new Date(x.at).toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' · <button type="button" class="lnk" data-act="reload">Muat semula</button>';
+    setBanner(SHEETB+metaBanner());
+  });
+}
+function pickDefault(){
+  var mx=maxMonth(), m=mx, w=-1;
+  for(var i=3;i>=0;i--) if(liveW(m,i)&&closed(m,i)){ w=i; break; }
+  if(w<0){ for(var j=3;j>=0;j--) if(liveW(m,j)){ w=j; break; } }
+  S.month=m; S.week=Math.max(0,w); S.q=Math.ceil(m/3);
+}
+function fixSel(){
+  if(!monthHas(S.month)) S.month=maxMonth();
+  while(S.week>0&&!liveW(S.month,S.week)) S.week--;
+}
+function srcFor(y){ for(var i=0;i<SOURCES.length;i++) if(SOURCES[i].y===y) return SOURCES[i]; return null; }
+function switchYear(y){
+  var sc=srcFor(y); if(!sc) return; YEAR=y; SHEET_ID=sc.id; TXT={};
+  loadData().then(function(){ pickDefault(); render(); }).catch(function(err){ READY=false; clearView(); setBanner('<b>Gagal baca Google Sheet '+y+'</b> · '+esc(errText(err))+' Semak link dan nama tab. <button type="button" class="lnk" data-act="reload">Muat semula</button>'); renderSrc(); });
+}
+function clearView(){ ['kpis','second','tbl','sum','notes'].forEach(function(id){ $(id).innerHTML=''; }); $('hTitle').textContent=''; $('hSub').textContent=''; $('hState').textContent=''; }
+function sheetId(link){ var m=String(link).match(/\/d\/([a-zA-Z0-9_-]{20,})/); if(m) return m[1]; return /^[a-zA-Z0-9_-]{20,}$/.test(String(link).trim())?String(link).trim():null; }
+function renderSrc(){
+  var ys=SOURCES.slice().sort(function(a,b){return a.y-b.y;});
+  $('srcList').innerHTML=ys.map(function(x){ return '<li><b>'+x.y+'</b> <a href="https://docs.google.com/spreadsheets/d/'+esc(x.id)+'/edit" target="_blank" rel="noopener">Buka sheet</a>'+(CAN&&DB&&ys.length>1?' <button type="button" class="lnk" data-act="srcdel" data-v="'+x.y+'">Buang</button>':'')+'</li>'; }).join('');
+  $('srcForm').hidden=!(CAN&&DB);
+  $('srcNote').textContent=(CAN&&DB)?'':'Hanya editor yang log masuk boleh tambah atau tukar link.';
+}
+function saveSources(list){ return DB.collection('config').doc('sources').set({list:list,at:new Date().toISOString()}); }
+function connectDb(){ return Promise.resolve(); }
+
+/* ---------- PDF ---------- */
+function loadScript(src,test){ if(test()) return Promise.resolve(); return new Promise(function(ok,no){ var sc=document.createElement('script'); sc.src=src; sc.onload=function(){ok();}; sc.onerror=function(){no(new Error('gagal muat '+src));}; document.head.appendChild(sc); }); }
+var THEME=null, THEMESET=false;
+function restoreTheme(){ if(!THEMESET) return; THEMESET=false; if(THEME===null) document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme',THEME); }
+function makePdf(btn){
+  if(!READY) return;
+  var old=btn.textContent; btn.disabled=true; btn.textContent='Menyediakan PDF…';
+    Promise.resolve(null).then(function(){
+        return loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){return !!window.html2canvas;});
+  }).then(function(){
+    return loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',function(){return !!(window.jspdf&&window.jspdf.jsPDF);});
+  }).then(function(){
+    THEME=document.documentElement.getAttribute('data-theme'); THEMESET=true; document.documentElement.setAttribute('data-theme','light');
+    var el=document.querySelector('.wrap'), bg=getComputedStyle(document.body).backgroundColor;
+    return window.html2canvas(el,{scale:2,backgroundColor:bg,useCORS:true,windowWidth:1240,
+      onclone:function(doc){ var w=doc.querySelector('.wrap'); w.style.maxWidth='1180px'; w.style.width='1180px'; doc.querySelectorAll('.tw').forEach(function(t){ t.style.overflow='visible'; }); doc.querySelectorAll('#notes textarea').forEach(function(t){ var d=doc.createElement('div'); d.className='npdf'; d.textContent=t.value||'—'; t.parentNode.replaceChild(d,t); }); },
+      ignoreElements:function(n){ return n.classList&&(n.classList.contains('bar')||n.classList.contains('src')||n.classList.contains('btns')||n.id==='banner'||n.tagName==='DIALOG'); }});
+  }).then(function(cv){
+    var J=window.jspdf.jsPDF, pdf=new J({orientation:'p',unit:'mm',format:'a4'}), pw=210, ph=297, m=8, w=pw-m*2;
+    var pxPerMm=cv.width/w, pagePx=Math.floor((ph-m*2)*pxPerMm), y=0, first=true;
+    while(y<cv.height){
+      var h=Math.min(pagePx,cv.height-y), c=document.createElement('canvas'); c.width=cv.width; c.height=h;
+      var ctx=c.getContext('2d'); ctx.fillStyle=getComputedStyle(document.body).backgroundColor; ctx.fillRect(0,0,c.width,h); ctx.drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
+      if(!first) pdf.addPage(); first=false;
+      pdf.addImage(c.toDataURL('image/jpeg',0.92),'JPEG',m,m,w,h/pxPerMm);
+      y+=h;
+    }
+    restoreTheme();
+    var name='Report Marketing V2 - '+$('hTitle').textContent+' - '+(S.plat==='ALL'?'Digital Marketing':S.plat)+'.pdf';
+    pdf.save(name);
+  }).catch(function(e){
+    if(e&&(e.code==='cancelled'||e.code==='declined'||e.code==='aborted')) return;
+    alert('Gagal buat PDF: '+((e&&e.message)||(e&&e.code)||e));
+  }).then(function(){ restoreTheme(); btn.disabled=false; btn.textContent=old; });
+}
+
+/* ---------- interaksi ---------- */
+document.addEventListener('click',function(e){
+  var b=e.target.closest('button[data-act]'); if(!b||b.disabled) return;
+  if(NPEND){ clearTimeout(NTIMER); flushSave(); }
+  var a=b.getAttribute('data-act'), v=b.getAttribute('data-v');
+  if(a==='lock'){ onLockBtn(); return; }
+  if(a==='srcadd'){
+    var y=parseInt($('srcYear').value,10), id=sheetId($('srcLink').value), msg=$('srcMsg');
+    if(!(y>=2020&&y<=2100)){ msg.textContent='Tahun tidak sah.'; return; }
+    if(!id){ msg.textContent='Link Google Sheet tidak sah.'; return; }
+    var exists=srcFor(y);
+    ask((exists?'Tukar':'Tambah')+' sumber '+y+'?',(exists?'Link sheet '+y+' sekarang akan diganti. ':'')+'Pastikan akaun Google Drive kau boleh buka sheet ini, dan nama tab ikut format "JAN '+String(y).slice(2)+'", "FEB '+String(y).slice(2)+'" dan susun atur sama seperti CC5.',false,'Simpan','pri',function(){
+      var list=SOURCES.filter(function(x){return x.y!==y;}).concat([{y:y,id:id}]);
+      return saveSources(list).then(function(){ msg.textContent='Disimpan. Pilih tahun '+y+' di atas.'; $('srcLink').value=''; });
+    }); return;
+  }
+  if(a==='srcdel'){ var yd=parseInt(v,10); ask('Buang sumber '+yd+'?','Link sheet '+yd+' akan dibuang daripada page. Sheet asal tidak terjejas. STATIC yang dikunci kekal.',true,'Buang','dng',function(){ return saveSources(SOURCES.filter(function(x){return x.y!==yd;})); }); return; }
+  if(a==='print'){ makePdf(b); return; }
+  if(a==='reload'){ TODAY=new Date(); loadData().then(function(){ fixSel(); render(); }).catch(function(err){ setBanner('<b>Gagal baca Google Sheet</b> · '+esc(errText(err))+' <button type="button" class="lnk" data-act="reload">Cuba lagi</button>'); }); return; }
+  if(a==='dlgNo'){ $('dlg').close(); PEND=null; return; }
+  if(a==='dlgYes'){ var f=PEND; PEND=null; $('dlg').close(); if(f) f().catch(function(err){ alert('Gagal: '+(err&&err.message||err)); }); return; }
+  if(a==='plat'){ S.plat=v; fixSel(); }
+  else if(a==='type') S.type=v; else if(a==='cmp') S.cmp=(v==='1');
+  render();
+});
+document.addEventListener('change',function(e){
+  var t=e.target, v=parseInt(t.value,10);
+  if(NPEND&&t.tagName==='SELECT'){ clearTimeout(NTIMER); flushSave(); }
+  if(t.id==='selYear'){ switchYear(v); return; }
+  if(t.id==='selMonth'){ S.month=v; fixSel(); }
+  else if(t.id==='selWeek') S.week=v;
+  else if(t.id==='selQ') S.q=v;
+  else return;
+  render();
+});
+document.addEventListener('input',function(e){
+  var t=e.target; if(t.id==='dlgTxt'){ $('dlgYes').disabled=(t.value.trim().toUpperCase()!=='BUKA'); return; }
+  if(!t.getAttribute||!t.getAttribute('data-f')||t.readOnly) return;
+  grow(t); queueSave();
+});
+
+setBanner('Memuatkan data…');
+connectDb().then(function(){ return loadData(); }).then(function(){ pickDefault(); render(); })
+  .catch(function(err){ setBanner('<b>Gagal baca Google Sheet</b> · '+esc(errText(err))+' Tiada angka dipaparkan. <button type="button" class="lnk" data-act="reload">Cuba lagi</button>'); });
+})();
+</script>
+
+
+
+</body>
+</html>
