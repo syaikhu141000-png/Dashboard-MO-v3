@@ -463,7 +463,6 @@ function lk(p,m,w){ return p.replace(/[^A-Za-z0-9]/g,'')+'_'+YEAR+'-'+m+'-'+(w+1
 function statW(m,w){ /* STATIC hanya wujud bila dikunci (atau diimport dari fail weekly) */
   var r=null, any=false;
   for(var i=0,ps=platsFor();i<ps.length;i++){ var p=ps[i]; if(!rawLive(p,m,w)) continue; any=true; var L=LOCKS[lk(p,m,w)]; if(!L) return null;
-    if(p==='Facebook'){ var mt=META[m+'-'+(w+1)]; if(mt){ L=Object.assign({},L,{spend:taxed(mt.spend),lm:mt.lm}); } }
     r=addV(r,L); }
   return any?r:null;
 }
@@ -1008,7 +1007,7 @@ function loadData(){
     var snapRaw={}, snapPl=(x.pl||[]).slice();
     snapPl.forEach(function(p){ snapRaw[p]={}; var src=(x.raw||{})[p]||{}; for(var m in src) snapRaw[p][+m]=src[m].map(function(w){ return Object.assign({},w); }); });
     RAW_CC2={}; var src2=x.rawCC2||{}; for(var plat2 in src2){ RAW_CC2[plat2]={}; for(var m2 in src2[plat2]) RAW_CC2[plat2][+m2]=src2[plat2][m2]; }
-    META=(x.meta&&x.meta.weeks)||{}; META_AT=(x.meta&&x.meta.at)||null; LOCKS=x.locks||{}; NOTES=x.notes||{};
+    LOCKS=x.locks||{}; NOTES=x.notes||{};
     var snapAt=x.at;
     var p5=loadLiveCC5(SHEET_ID,YEAR).then(function(live){ return {ok:true,live:live}; }).catch(function(){ return {ok:false}; });
     var p2=!CC2_SHEET_ID?Promise.resolve({ok:false,none:true}):loadLiveCC2(CC2_SHEET_ID,YEAR).then(function(live){ return {ok:true,live:live}; }).catch(function(){ return {ok:false}; });
@@ -1019,9 +1018,9 @@ function loadData(){
       if(r2.ok){ for(var plat3 in r2.live.raw) RAW_CC2[plat3]=Object.assign({},RAW_CC2[plat3],r2.live.raw[plat3]); cc2Note='LIVE'+(r2.live.miss.length?' (tab tiada: '+esc(r2.live.miss.join(', '))+')':''); }
       else if(r2.none){ cc2Note='tiada sumber utk '+YEAR; }
       else { cc2Note='snapshot (live gagal)'; }
-      applyMeta(); READY=true;
+      READY=true;
       SHEETB='CC5: <b>'+cc5Note+'</b> · CC2: <b>'+cc2Note+'</b> · dikemas kini '+new Date().toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' · <button type="button" class="lnk" data-act="reload">Muat semula</button>';
-      setBanner(SHEETB+metaBanner());
+      setBanner(SHEETB);
     });
   });
 }
