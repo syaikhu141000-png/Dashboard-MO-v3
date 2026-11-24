@@ -1,7 +1,12 @@
 // Jana data.json untuk Report Marketing V2 (public).
-// Guna: node build.mjs --xlsx CC5.xlsx --meta meta.json [--metaupd minggu_baru.json] --locks DIR --notes DIR --year 2026 --out data.json
+// Guna: node build.mjs --xlsx CC5.xlsx --meta meta.json [--metaupd minggu_baru.json] --locks DIR --notes DIR --year 2026 --out data.json [--rawxlsx CC5_WEEKLY.xlsx]
 // - metaupd: {"11-3":{spend,lm,acc,until}} minggu Meta yang baru ditarik (ganti minggu sama dalam meta)
 // - xlsx  : CC5 IMPORTEDDATA (export xlsx dari Google Drive)
+// - rawxlsx: CC5 "SALE & MARKETING REPORT WEEKLY" (Sheet1..Sheet12 = salinan terus CC2, lajur A:K/A:H,
+//            IMPORTRANGE tanpa ubah). Kalau diberi: Leads Sales/Intro/Booking/Enroll utk FACEBOOK SAHAJA
+//            dikira semula terus dari baris mentah ni ikut TARIKH SEBENAR (bukan lajur minggu manual
+//            I/L yang kerap silap/kosong di hujung bulan). lm & spend Facebook TIDAK disentuh (lm dari
+//            CC5 ringkasan / spend dari Meta). Google & TikTok tidak disentuh (kekal dari --xlsx).
 // - meta  : {at, weeks:{"m-w":{spend,lm,...}}}  (spend SEBELUM 8% cukai; page tambah 8%)
 // - locks : folder fail JSON doc "locks" (satu fail satu doc) dari page V2
 // - notes : folder fail JSON doc "notes" dari page V2
@@ -63,6 +68,37 @@ function parseMonth(text){
 }
 
 
+/* ---------- Facebook terus dari CC2 (Sheet1..Sheet12 dalam CC5 WEEKLY), ikut tarikh sebenar ---------- */
+const FB_PLATFORMS=['facebook ads','fb ads whatsform'];
+function fbWeekFromRawSheet(ws){
+  // Lajur (sama utk semua bulan, A:K): 0 Column1, 1 Tarikh, 2 Umur, 3 Platform, 4 Keyword, 5 No.Telefon, 6 Category, 7 Status.
+  const rows=X.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const out=[{ls:0,intro:0,book:0,enrol:0},{ls:0,intro:0,book:0,enrol:0},{ls:0,intro:0,book:0,enrol:0},{ls:0,intro:0,book:0,enrol:0}];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];
+    const p=String(r[3]||'').trim().toLowerCase();
+    if(!FB_PLATFORMS.includes(p)) continue;
+    const d=r[1]; let dd=null;
+    if(typeof d==='number'){ const dt=new Date(Math.round((d-25569)*86400000)); dd=dt.getUTCDate(); }
+    else if(d!=null){ const t=String(d).trim().match(/^(\d{1,2})[.\/\-]/); if(t) dd=+t[1]; }
+    if(dd==null) continue; // tiada tarikh -> tak dikira (lebih selamat drpd teka minggu)
+    const w=dd<=7?0:dd<=14?1:dd<=21?2:3;
+    const st=String(r[7]||'').trim().toUpperCase();
+    out[w].ls++;
+    if(st==='INTRO') out[w].intro++;
+    if(st==='BOOKING'||st==='ENROL') out[w].book++;
+    if(st==='ENROL') out[w].enrol++;
+  }
+  return out;
+}
+function loadFbRaw(file){
+  if(!file) return null;
+  const wbr=X.readFile(file); const fb={};
+  for(let m=1;m<=12;m++){ const ws=wbr.Sheets['Sheet'+m]; if(!ws) continue; fb[m]=fbWeekFromRawSheet(ws); }
+  return fb;
+}
+const FB_RAW=loadFbRaw(A.rawxlsx);
+
 const wb = X.readFile(A.xlsx); const names={}; wb.SheetNames.forEach(n=>names[n.trim().toUpperCase().replace(/\s+/g,' ')]=n);
 const yy=String(YEAR).slice(2), now=new Date(Date.now()+8*3600000);
 const lastM = now.getUTCFullYear()>YEAR?12:(now.getUTCFullYear()<YEAR?0:now.getUTCMonth()+1);
@@ -72,6 +108,14 @@ for(let m=1;m<=lastM;m++){
   const d=parseMonth(X.utils.sheet_to_csv(wb.Sheets[tab],{blankrows:true}));
   for(const p in d){ if(!pl.includes(p)) pl.push(p); raw[p]=raw[p]||{}; raw[p][m]=d[p].map(w=>{ const o={}; F.forEach(k=>o[k]=w[k]==null?null:w[k]); return o; }); }
   tabs[m]=tab;
+  if(FB_RAW && FB_RAW[m] && raw.Facebook && raw.Facebook[m]){
+    for(let w=0;w<4;w++){
+      const o=raw.Facebook[m][w]; if(!o) continue;
+      if(!F.some(k=>o[k]!=null)) continue; // minggu blm wujud dlm CC5 (cth. blm sampai) -> kekal kosong
+      const fw=FB_RAW[m][w];
+      o.ls=fw.ls; o.intro=fw.intro; o.book=fw.book; o.enrol=fw.enrol;
+    }
+  }
 }
 pl.sort((a,b)=>['Facebook','Google','TikTok'].indexOf(a)-['Facebook','Google','TikTok'].indexOf(b));
 if(!pl.length){ console.error("error: tiada tab "+YEAR); process.exit(1); }
@@ -80,6 +124,7 @@ let meta={at:null,weeks:{}}; if(A.meta){ const j=JSON.parse(fs.readFileSync(A.me
 if(A.metaupd){ const u=JSON.parse(fs.readFileSync(A.metaupd,'utf8')); for(const k in u){ if(!/^\d{1,2}-[1-4]$/.test(k)) continue; const o=u[k]; if(typeof o.spend!=='number'||typeof o.lm!=='number') continue; meta.weeks[k]=Object.assign({},o,{spend:Math.round(o.spend*100)/100}); } meta.at=new Date().toISOString(); }
 const locks=readDir(A.locks), notes=readDir(A.notes);
 for(const k in locks) for(const f of ['version','id','createdAt','updatedAt']) delete locks[k][f];
-const out={y:YEAR,at:new Date().toISOString(),pl,raw,tabs,meta,locks,notes,src:"CC5 IMPORTEDDATA + Meta Ads (MO2+MO4+MO05)"};
+const out={y:YEAR,at:new Date().toISOString(),pl,raw,tabs,meta,locks,notes,
+  src:"CC5 IMPORTEDDATA + Meta Ads (MO2+MO4+MO05)"+(FB_RAW?" + CC2 terus (Facebook: Leads Sales/Intro/Booking/Enroll ikut tarikh sebenar)":"")};
 fs.writeFileSync(A.out||'data.json',JSON.stringify(out));
-console.log(JSON.stringify({ok:true,year:YEAR,tabs,miss,pl,metaWeeks:Object.keys(meta.weeks).length,metaAt:meta.at,locks:Object.keys(locks).length,notes:Object.keys(notes).length}));
+console.log(JSON.stringify({ok:true,year:YEAR,tabs,miss,pl,metaWeeks:Object.keys(meta.weeks).length,metaAt:meta.at,locks:Object.keys(locks).length,notes:Object.keys(notes).length,fbRawMonths:FB_RAW?Object.keys(FB_RAW).length:0}));
