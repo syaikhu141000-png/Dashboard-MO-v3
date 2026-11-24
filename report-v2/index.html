@@ -924,7 +924,7 @@ function renderSrc(){
   $('srcNote').textContent=(CAN&&DB)?'':'Hanya editor yang log masuk boleh tambah atau tukar link.';
 }
 function saveSources(list){ return DB.collection('config').doc('sources').set({list:list,at:new Date().toISOString()}); }
-var API_BASE='https://mo2-dashboard.syaikhu141000.workers.dev';
+var API_BASE='https://report-v2-api.syaikhu141000.workers.dev';
 function rv2Pw(){ try{ return sessionStorage.getItem('rv2pw')||''; }catch(e){ return ''; } }
 function rv2Headers(){ var h={'content-type':'application/json'}; var pw=rv2Pw(); if(pw) h['x-rv2-password']=pw; return h; }
 function updEditBtn(){ var b=$('btnEdit'); if(b) b.textContent=CAN?'Log keluar edit':'Log masuk edit'; }
