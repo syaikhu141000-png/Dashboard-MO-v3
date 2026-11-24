@@ -890,17 +890,64 @@ function loadCache(){
     SHEETB=('<b>LIVE</b> · Google Sheet '+YEAR+' · dikemas kini '+new Date(x.at).toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' · <button type="button" class="lnk" data-act="reload">Muat semula</button>'); setBanner(SHEETB);
   });
 }
+/* ---------- CC5 live terus dari Google Sheet (gviz CSV, ikut nama tab — bukan gid) ----------
+   Perlu sheet CC5 di-share "Anyone with the link: Viewer". Ikut tarikh sebenar, tiada caching
+   di pihak kita — setiap kali page dibuka, data terkini. Meta Ads TETAP dari data.json (schedule),
+   sebab tu perlu token/akaun, tak boleh terus dari browser viewer. */
+function gvizCsvUrl(id,tabName){ return 'https://docs.google.com/spreadsheets/d/'+id+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(tabName); }
+function fetchTabLiveCsv(id,candidates){
+  var i=0;
+  function tryNext(){
+    if(i>=candidates.length) return Promise.reject(new Error('tab tiada'));
+    var name=candidates[i++];
+    return fetch(gvizCsvUrl(id,name),{cache:'no-store'}).then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.text();
+    }).then(function(t){
+      if(/^<!DOCTYPE html/i.test(t.trim())||/<html/i.test(t.slice(0,200))) throw new Error('bukan CSV (sheet mungkin private/nama salah)');
+      return t;
+    }).catch(function(){ return tryNext(); });
+  }
+  return tryNext();
+}
+function loadLiveCC5(id,year){
+  var yy=String(year).slice(2), lastM=TODAY.getFullYear()>year?12:(TODAY.getFullYear()<year?0:TODAY.getMonth()+1);
+  var rawLive={}, plLive=[], miss=[], got=0;
+  var jobs=[]; for(var m=1;m<=lastM;m++) jobs.push(m);
+  return Promise.all(jobs.map(function(m){
+    var cands=MTAB[m-1].map(function(b){ return b+' '+yy; });
+    return fetchTabLiveCsv(id,cands).then(function(text){
+      var d=parseMonth(text), any=false;
+      for(var p in d){ if(plLive.indexOf(p)<0) plLive.push(p); rawLive[p]=rawLive[p]||{}; rawLive[p][m]=d[p]; any=true; }
+      if(any){ got++; } else miss.push(MN[m-1]);
+    }).catch(function(){ miss.push(MN[m-1]); });
+  })).then(function(){
+    if(!got) throw new Error('tiada tab '+year+' dapat dibaca live');
+    plLive.sort(function(a,b){ return ['Facebook','Google','TikTok'].indexOf(a)-['Facebook','Google','TikTok'].indexOf(b); });
+    return {raw:rawLive,pl:plLive,miss:miss};
+  });
+}
 function loadData(){
-  /* Versi public: baca snapshot data.json (dijana setiap hari dari CC5 + Meta Ads + kunci/catatan V2) */
+  /* Versi public: CC5 cuba LIVE terus dari Google Sheet (gviz CSV); Meta Ads/locks/notes/meta-cache
+     dari data.json (dijana schedule harian, sebab Meta Ads perlukan token). Kalau live CC5 gagal
+     (sheet private/network), fallback guna snapshot data.json macam asal supaya page tetap jalan. */
   setBanner('Memuatkan data…');
   return fetch('data.json?t='+Date.now(),{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('data.json HTTP '+r.status); return r.json(); }).then(function(x){
-    YEAR=x.y; RAW={}; PL=(x.pl||[]).slice();
-    PL.forEach(function(p){ RAW[p]={}; var src=(x.raw||{})[p]||{}; for(var m in src) RAW[p][+m]=src[m].map(function(w){ return Object.assign({},w); }); });
+    YEAR=x.y;
+    var snapRaw={}, snapPl=(x.pl||[]).slice();
+    snapPl.forEach(function(p){ snapRaw[p]={}; var src=(x.raw||{})[p]||{}; for(var m in src) snapRaw[p][+m]=src[m].map(function(w){ return Object.assign({},w); }); });
     RAW_CC2={}; var src2=(x.rawCC2&&x.rawCC2.Facebook)||{}; RAW_CC2.Facebook={}; for(var m2 in src2) RAW_CC2.Facebook[+m2]=src2[m2];
     META=(x.meta&&x.meta.weeks)||{}; META_AT=(x.meta&&x.meta.at)||null; LOCKS=x.locks||{}; NOTES=x.notes||{};
-    applyMeta(); READY=true;
-    SHEETB='<b>LIVE</b> · CC5 '+YEAR+' · snapshot '+new Date(x.at).toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' · <button type="button" class="lnk" data-act="reload">Muat semula</button>';
-    setBanner(SHEETB+metaBanner());
+    var snapAt=x.at;
+    return loadLiveCC5(SHEET_ID,YEAR).then(function(live){
+      RAW=live.raw; PL=live.pl; applyMeta(); READY=true;
+      SHEETB='<b>LIVE</b> · Google Sheet CC5 '+YEAR+' · dibaca '+new Date().toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+(live.miss.length?' · tab tiada: '+esc(live.miss.join(', ')):'')+' · <button type="button" class="lnk" data-act="reload">Muat semula</button>';
+      setBanner(SHEETB+metaBanner());
+    }).catch(function(){
+      RAW=snapRaw; PL=snapPl; applyMeta(); READY=true;
+      SHEETB='<b>Snapshot</b> · CC5 '+YEAR+' · gagal baca live, guna snapshot '+new Date(snapAt).toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' · <button type="button" class="lnk" data-act="reload">Cuba live semula</button>';
+      setBanner(SHEETB+metaBanner());
+    });
   });
 }
 function pickDefault(){
