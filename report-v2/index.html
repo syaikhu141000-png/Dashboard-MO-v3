@@ -228,6 +228,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end}
       <button type="button" data-act="theme" data-v="system" aria-pressed="false" title="Ikut tetapan peranti"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="theme-label">Auto</span></button>
     </div>
     <div class="seg" id="platSeg" role="group" aria-label="Platform"></div>
+    <div class="seg" id="srcSeg" role="group" aria-label="Sumber data Facebook" hidden></div>
     <div class="seg" id="typeSeg" role="group" aria-label="Jenis report"></div>
     <label class="sel" id="selYearW" hidden>Tahun <select id="selYear"></select></label>
     <label class="sel" id="selMonthW">Bulan <select id="selMonth"></select></label>
@@ -385,11 +386,21 @@ function parseMonth(text){
 }
 
 /* ---------- simpanan ---------- */
-var RAW={}, PL=[], LOADED={}, LOCKS={}, DB=null, CAN=false, READY=false;
+var RAW={}, RAW_CC2={}, PL=[], LOADED={}, LOCKS={}, DB=null, CAN=false, READY=false;
+function srcPrefGet(){ try{ return localStorage.getItem('rv2SrcPref')||'cc5'; }catch(e){ return 'cc5'; } }
+function srcPrefSet(v){ SRC_PREF=v; try{ localStorage.setItem('rv2SrcPref',v); }catch(e){} }
+var SRC_PREF=srcPrefGet();
 var S={type:'mingguan',month:TODAY.getMonth()+1,week:0,q:1,cmpMode:'prev',cmpMonth:1,cmpWeek:0,plat:'Facebook'};
 var TXT={};
 function hasAny(v){ if(!v) return false; for(var i=0;i<F.length;i++) if(v[F[i]]!=null) return true; return false; }
-function rawLive(p,m,w){ var v=RAW[p]&&RAW[p][m]&&RAW[p][m][w]; return hasAny(v)?v:null; }
+function rawLive(p,m,w){
+  var v=RAW[p]&&RAW[p][m]&&RAW[p][m][w];
+  if(p==='Facebook'&&SRC_PREF==='cc2'){
+    var c=RAW_CC2.Facebook&&RAW_CC2.Facebook[m]&&RAW_CC2.Facebook[m][w];
+    if(c) v=Object.assign({},v,{ls:c.ls,intro:c.intro,book:c.book,enrol:c.enrol});
+  }
+  return hasAny(v)?v:null;
+}
 function platsAll(){ return PL; }
 function platsFor(){ return S.plat==='ALL'?platsAll():[S.plat]; }
 function addV(a,b){ /* null + null = null (kekal kosong) */
@@ -524,6 +535,9 @@ function renderBar(){
   var pl=['Facebook'].concat(PL.filter(function(p){return p!=='Facebook';})).concat(['ALL']);
   $('platSeg').innerHTML=pl.map(function(p){return '<button type="button" data-act="plat" data-v="'+esc(p)+'" aria-pressed="'+(S.plat===p)+'">'+esc(p==='ALL'?'Digital Marketing':p)+'</button>';}).join('');
   $('brandPlat').textContent=S.plat==='ALL'?'DIGITAL MARKETING':String(S.plat).toUpperCase();
+  var sg=$('srcSeg'), showSrc=(S.plat==='Facebook'&&RAW_CC2.Facebook);
+  sg.hidden=!showSrc;
+  if(showSrc) sg.innerHTML=['cc5','cc2'].map(function(v){return '<button type="button" data-act="srcpref" data-v="'+v+'" aria-pressed="'+(SRC_PREF===v)+'" title="'+(v==='cc5'?'CC5 (ringkasan, lajur minggu)':'CC2 (database lead, terus ikut tarikh)')+'">'+v.toUpperCase()+'</button>';}).join('');
   var ys=SOURCES.map(function(x){return x.y;}).sort();
   $('selYearW').hidden=ys.length<2;
   $('selYear').innerHTML=ys.map(function(y){return '<option value="'+y+'"'+(y===YEAR?' selected':'')+'>'+y+'</option>';}).join('');
@@ -566,7 +580,7 @@ function render(){
   var P=period(), c=P.live, C=comparison(P), cmp=!!C, st=status();
   $('hType').textContent={mingguan:'Report mingguan',bulanan:'Report bulanan',suku:'Report suku tahun',tahunan:'Report overall tahun'}[S.type]+' · '+PLN(S.plat);
   $('hTitle').textContent=S.type==='mingguan'?'W'+(S.week+1)+' '+MFULL[S.month-1]+' '+YEAR:S.type==='bulanan'?MFULL[S.month-1]+' '+YEAR:S.type==='tahunan'?'Overall '+YEAR:'Suku '+S.q+' '+YEAR;
-  $('hSub').textContent=range();
+  $('hSub').textContent=range()+(S.plat==='Facebook'&&RAW_CC2.Facebook?(SRC_PREF==='cc2'?' · Leads Sales/Intro/Booking/Enroll: CC2 terus (ikut tarikh)':' · Leads Sales/Intro/Booking/Enroll: CC5 (ringkasan)'):'');
   var hs=$('hState'); hs.textContent=st.t; hs.className='state'+(st.open?' open':'');
 
   /* Banding dengan tempoh pilihan: utamakan STATIC; jika belum dikunci, guna LIVE dan label jelas. */
@@ -882,6 +896,7 @@ function loadData(){
   return fetch('data.json?t='+Date.now(),{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('data.json HTTP '+r.status); return r.json(); }).then(function(x){
     YEAR=x.y; RAW={}; PL=(x.pl||[]).slice();
     PL.forEach(function(p){ RAW[p]={}; var src=(x.raw||{})[p]||{}; for(var m in src) RAW[p][+m]=src[m].map(function(w){ return Object.assign({},w); }); });
+    RAW_CC2={}; var src2=(x.rawCC2&&x.rawCC2.Facebook)||{}; RAW_CC2.Facebook={}; for(var m2 in src2) RAW_CC2.Facebook[+m2]=src2[m2];
     META=(x.meta&&x.meta.weeks)||{}; META_AT=(x.meta&&x.meta.at)||null; LOCKS=x.locks||{}; NOTES=x.notes||{};
     applyMeta(); READY=true;
     SHEETB='<b>LIVE</b> · CC5 '+YEAR+' · snapshot '+new Date(x.at).toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' · <button type="button" class="lnk" data-act="reload">Muat semula</button>';
@@ -1002,6 +1017,7 @@ document.addEventListener('click',function(e){
   if(a==='dlgNo'){ $('dlg').close(); PEND=null; return; }
   if(a==='dlgYes'){ var f=PEND; PEND=null; $('dlg').close(); if(f) f().then(function(){ updLock(); render(); }).catch(function(err){ alert('Gagal: '+(err&&err.message||err)); }); return; }
   if(a==='edit'){ doEditToggle(); return; }
+  if(a==='srcpref'){ srcPrefSet(v); render(); return; }
   if(a==='plat'){ S.plat=v; fixSel(); }
   else if(a==='type'){ S.type=v; if(S.cmpMode==='custom'&&S.type!=='mingguan'&&S.type!=='bulanan') S.cmpMode='prev'; }
   else if(a==='cmp'){ S.cmpMode=v; if(v==='custom') setCustomDefault(); }

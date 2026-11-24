@@ -3,10 +3,11 @@
 // - metaupd: {"11-3":{spend,lm,acc,until}} minggu Meta yang baru ditarik (ganti minggu sama dalam meta)
 // - xlsx  : CC5 IMPORTEDDATA (export xlsx dari Google Drive)
 // - rawxlsx: CC5 "SALE & MARKETING REPORT WEEKLY" (Sheet1..Sheet12 = salinan terus CC2, lajur A:K/A:H,
-//            IMPORTRANGE tanpa ubah). Kalau diberi: Leads Sales/Intro/Booking/Enroll utk FACEBOOK SAHAJA
-//            dikira semula terus dari baris mentah ni ikut TARIKH SEBENAR (bukan lajur minggu manual
-//            I/L yang kerap silap/kosong di hujung bulan). lm & spend Facebook TIDAK disentuh (lm dari
-//            CC5 ringkasan / spend dari Meta). Google & TikTok tidak disentuh (kekal dari --xlsx).
+//            IMPORTRANGE tanpa ubah). Kalau diberi: Leads Sales/Intro/Booking/Enroll Facebook dikira
+//            semula ikut TARIKH SEBENAR dan disimpan BERASINGAN dalam "rawCC2.Facebook" (TIDAK menimpa
+//            "raw.Facebook" — tu kekal CC5 macam asal). Page pilih sumber mana nak papar (toggle
+//            CC5/CC2, default CC5) utk Facebook sahaja; Google/TikTok tiada rawCC2, kekal CC5 je.
+//            lm & spend Facebook tak disentuh langsung oleh rawCC2 (lm dari CC5 ringkasan / spend dari Meta).
 // - meta  : {at, weeks:{"m-w":{spend,lm,...}}}  (spend SEBELUM 8% cukai; page tambah 8%)
 // - locks : folder fail JSON doc "locks" (satu fail satu doc) dari page V2
 // - notes : folder fail JSON doc "notes" dari page V2
@@ -108,19 +109,21 @@ for(let m=1;m<=lastM;m++){
   const d=parseMonth(X.utils.sheet_to_csv(wb.Sheets[tab],{blankrows:true}));
   for(const p in d){ if(!pl.includes(p)) pl.push(p); raw[p]=raw[p]||{}; raw[p][m]=d[p].map(w=>{ const o={}; F.forEach(k=>o[k]=w[k]==null?null:w[k]); return o; }); }
   tabs[m]=tab;
-  if(FB_RAW && FB_RAW[m] && raw.Facebook && raw.Facebook[m]){
-    for(let w=0;w<4;w++){
-      const o=raw.Facebook[m][w]; if(!o) continue;
+}
+
+/* rawCC2.Facebook[m] = [{ls,intro,book,enrol}x4] — BERASINGAN drpd raw.Facebook (CC5), tak menimpa apa-apa.
+   Minggu yg belum bermula (tarikh akan datang) = null (tiada data direka). Page yg pilih nak papar CC2 ke CC5. */
+const rawCC2={};
+if(FB_RAW){
+  rawCC2.Facebook={};
+  for(const m in FB_RAW){
+    rawCC2.Facebook[m]=[0,1,2,3].map(w=>{
       const weekStartDay=w*7+1; // W1=1, W2=8, W3=15, W4=22
       const weekStarted=new Date(Date.UTC(YEAR,m-1,weekStartDay))<=now;
-      // CC2 terus ikut TARIKH SEBENAR — bebas drpd CC5 (jangan gantung override pada CC5 'lm'
-      // dah diisi ke belum; itu punca asal masalah "Leads Sales still kosong" walau minggu dah tamat).
-      // Minggu yg betul2 belum bermula (tarikh akan datang) kekal kosong; minggu yg dah bermula/tamat
-      // ambil terus dari CC2, walaupun CC5 (lm/spend) masih kosong.
-      if(!weekStarted) continue;
+      if(!weekStarted) return null;
       const fw=FB_RAW[m][w];
-      o.ls=fw.ls; o.intro=fw.intro; o.book=fw.book; o.enrol=fw.enrol;
-    }
+      return {ls:fw.ls,intro:fw.intro,book:fw.book,enrol:fw.enrol};
+    });
   }
 }
 pl.sort((a,b)=>['Facebook','Google','TikTok'].indexOf(a)-['Facebook','Google','TikTok'].indexOf(b));
@@ -130,7 +133,7 @@ let meta={at:null,weeks:{}}; if(A.meta){ const j=JSON.parse(fs.readFileSync(A.me
 if(A.metaupd){ const u=JSON.parse(fs.readFileSync(A.metaupd,'utf8')); for(const k in u){ if(!/^\d{1,2}-[1-4]$/.test(k)) continue; const o=u[k]; if(typeof o.spend!=='number'||typeof o.lm!=='number') continue; meta.weeks[k]=Object.assign({},o,{spend:Math.round(o.spend*100)/100}); } meta.at=new Date().toISOString(); }
 const locks=readDir(A.locks), notes=readDir(A.notes);
 for(const k in locks) for(const f of ['version','id','createdAt','updatedAt']) delete locks[k][f];
-const out={y:YEAR,at:new Date().toISOString(),pl,raw,tabs,meta,locks,notes,
-  src:"CC5 IMPORTEDDATA + Meta Ads (MO2+MO4+MO05)"+(FB_RAW?" + CC2 terus (Facebook: Leads Sales/Intro/Booking/Enroll ikut tarikh sebenar)":"")};
+const out={y:YEAR,at:new Date().toISOString(),pl,raw,rawCC2,tabs,meta,locks,notes,
+  src:"CC5 IMPORTEDDATA + Meta Ads (MO2+MO4+MO05)"+(FB_RAW?" + CC2 terus tersedia sbg pilihan (Facebook, toggle CC5/CC2 di page)":"")};
 fs.writeFileSync(A.out||'data.json',JSON.stringify(out));
 console.log(JSON.stringify({ok:true,year:YEAR,tabs,miss,pl,metaWeeks:Object.keys(meta.weeks).length,metaAt:meta.at,locks:Object.keys(locks).length,notes:Object.keys(notes).length,fbRawMonths:FB_RAW?Object.keys(FB_RAW).length:0}));
