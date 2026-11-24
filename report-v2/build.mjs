@@ -111,7 +111,13 @@ for(let m=1;m<=lastM;m++){
   if(FB_RAW && FB_RAW[m] && raw.Facebook && raw.Facebook[m]){
     for(let w=0;w<4;w++){
       const o=raw.Facebook[m][w]; if(!o) continue;
-      if(!F.some(k=>o[k]!=null)) continue; // minggu blm wujud dlm CC5 (cth. blm sampai) -> kekal kosong
+      const weekStartDay=w*7+1; // W1=1, W2=8, W3=15, W4=22
+      const weekStarted=new Date(Date.UTC(YEAR,m-1,weekStartDay))<=now;
+      // CC2 terus ikut TARIKH SEBENAR — bebas drpd CC5 (jangan gantung override pada CC5 'lm'
+      // dah diisi ke belum; itu punca asal masalah "Leads Sales still kosong" walau minggu dah tamat).
+      // Minggu yg betul2 belum bermula (tarikh akan datang) kekal kosong; minggu yg dah bermula/tamat
+      // ambil terus dari CC2, walaupun CC5 (lm/spend) masih kosong.
+      if(!weekStarted) continue;
       const fw=FB_RAW[m][w];
       o.ls=fw.ls; o.intro=fw.intro; o.book=fw.book; o.enrol=fw.enrol;
     }
