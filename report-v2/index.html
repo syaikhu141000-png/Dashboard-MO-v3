@@ -314,6 +314,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end}
    Page baca setiap tab terus (live) dan ambil blok FACEBOOK, GOOGLE, TIKTOK.
    Sel kosong dalam sheet = kosong dalam page. Tiada nombor direka.        */
 var DEFAULT_SOURCES=[{y:2026,id:'1g3d2iXZBRQnl9E8S9gLxDFI2eEfiTMtf7RPPYCatOQE'}];
+var CC2_SHEET_ID='1bgTcEpZPJjqKlWwkYNl9GC6f263XqLUTe0ukbwtgY_g'; /* CC2 sebenar (database lead) - live, utk Facebook Leads Sales/Intro/Booking/Enroll */
 var SOURCES=DEFAULT_SOURCES.slice();
 /* Nama tab ikut bulan + 2 digit tahun, contoh "OKT 26", "JAN 27". Nama alternatif dicuba jika yang pertama tiada. */
 var MTAB=[['JAN'],['FEB'],['MAC','MAR'],['APRIL','APR'],['MEI','MAY'],['JUN'],['JULAI','JUL'],['OGOS','AUG'],['SEPT','SEP'],['OKT','OCT'],['NOV'],['DIS','DEC']];
@@ -383,6 +384,49 @@ function parseMonth(text){
     for(var w=0;w<4;w++) blk[w][f]=cell(r[2+w*2]);
   });
   return out;
+}
+
+/* ---------- Facebook terus dari CC2 (database lead sebenar), ikut tarikh sebenar -----------
+   Lajur (sama utk semua bulan, A:K): 0 Column1, 1 Tarikh, 2 Umur, 3 Platform, 4 Keyword,
+   5 No.Telefon, 6 Category, 7 Status. Baris header ("Platform" dll) tak match FB_PLATFORMS,
+   jadi tersisih sendiri tanpa perlu kesan khas. */
+var FB_PLATFORMS=['facebook ads','fb ads whatsform'];
+function fbWeekFromCsvRows(rows){
+  var out=[{ls:0,intro:0,book:0,enrol:0},{ls:0,intro:0,book:0,enrol:0},{ls:0,intro:0,book:0,enrol:0},{ls:0,intro:0,book:0,enrol:0}];
+  rows.forEach(function(r){
+    var p=String(r[3]||'').trim().toLowerCase();
+    if(FB_PLATFORMS.indexOf(p)<0) return;
+    var d=r[1], dd=null, t;
+    if(d!=null){ t=String(d).trim().match(/^(\d{1,2})[.\/\-]/); if(t) dd=+t[1]; }
+    if(dd==null) return;
+    var w=dd<=7?0:dd<=14?1:dd<=21?2:3;
+    var st=String(r[7]||'').trim().toUpperCase();
+    out[w].ls++;
+    if(st==='INTRO') out[w].intro++;
+    if(st==='BOOKING'||st==='ENROL') out[w].book++;
+    if(st==='ENROL') out[w].enrol++;
+  });
+  return out;
+}
+function loadLiveCC2(id,year){
+  var yy=String(year).slice(2), lastM=TODAY.getFullYear()>year?12:(TODAY.getFullYear()<year?0:TODAY.getMonth()+1);
+  var fb={}, miss=[], got=0;
+  var jobs=[]; for(var m=1;m<=lastM;m++) jobs.push(m);
+  return Promise.all(jobs.map(function(m){
+    var cands=MTAB[m-1].map(function(b){ return b+' '+yy; });
+    return fetchTabLiveCsv(id,cands).then(function(text){
+      var weeks=fbWeekFromCsvRows(parseCSV(text));
+      fb[m]=[0,1,2,3].map(function(w){
+        var start=new Date(YEAR,m-1,[1,8,15,22][w]);
+        if(start>TODAY) return null; // minggu belum bermula - kekal kosong, tiada reka angka
+        return weeks[w];
+      });
+      got++;
+    }).catch(function(){ miss.push(MN[m-1]); });
+  })).then(function(){
+    if(!got) throw new Error('tiada tab '+year+' CC2 dapat dibaca live');
+    return {Facebook:fb,miss:miss};
+  });
 }
 
 /* ---------- simpanan ---------- */
@@ -939,13 +983,16 @@ function loadData(){
     RAW_CC2={}; var src2=(x.rawCC2&&x.rawCC2.Facebook)||{}; RAW_CC2.Facebook={}; for(var m2 in src2) RAW_CC2.Facebook[+m2]=src2[m2];
     META=(x.meta&&x.meta.weeks)||{}; META_AT=(x.meta&&x.meta.at)||null; LOCKS=x.locks||{}; NOTES=x.notes||{};
     var snapAt=x.at;
-    return loadLiveCC5(SHEET_ID,YEAR).then(function(live){
-      RAW=live.raw; PL=live.pl; applyMeta(); READY=true;
-      SHEETB='<b>LIVE</b> · Google Sheet CC5 '+YEAR+' · dibaca '+new Date().toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+(live.miss.length?' · tab tiada: '+esc(live.miss.join(', ')):'')+' · <button type="button" class="lnk" data-act="reload">Muat semula</button>';
-      setBanner(SHEETB+metaBanner());
-    }).catch(function(){
-      RAW=snapRaw; PL=snapPl; applyMeta(); READY=true;
-      SHEETB='<b>Snapshot</b> · CC5 '+YEAR+' · gagal baca live, guna snapshot '+new Date(snapAt).toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' · <button type="button" class="lnk" data-act="reload">Cuba live semula</button>';
+    var p5=loadLiveCC5(SHEET_ID,YEAR).then(function(live){ return {ok:true,live:live}; }).catch(function(){ return {ok:false}; });
+    var p2=loadLiveCC2(CC2_SHEET_ID,YEAR).then(function(live){ return {ok:true,live:live}; }).catch(function(){ return {ok:false}; });
+    return Promise.all([p5,p2]).then(function(rs){
+      var r5=rs[0], r2=rs[1], cc5Note, cc2Note;
+      if(r5.ok){ RAW=r5.live.raw; PL=r5.live.pl; cc5Note='LIVE'+(r5.live.miss.length?' (tab tiada: '+esc(r5.live.miss.join(', '))+')':''); }
+      else { RAW=snapRaw; PL=snapPl; cc5Note='snapshot '+new Date(snapAt).toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' (live gagal)'; }
+      if(r2.ok){ RAW_CC2.Facebook=Object.assign({},RAW_CC2.Facebook,r2.live.Facebook); cc2Note='LIVE'+(r2.live.miss.length?' (tab tiada: '+esc(r2.live.miss.join(', '))+')':''); }
+      else { cc2Note='snapshot (live gagal)'; }
+      applyMeta(); READY=true;
+      SHEETB='CC5: <b>'+cc5Note+'</b> · CC2: <b>'+cc2Note+'</b> · dikemas kini '+new Date().toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' · <button type="button" class="lnk" data-act="reload">Muat semula</button>';
       setBanner(SHEETB+metaBanner());
     });
   });

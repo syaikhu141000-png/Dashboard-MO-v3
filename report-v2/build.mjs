@@ -92,13 +92,20 @@ function fbWeekFromRawSheet(ws){
   }
   return out;
 }
-function loadFbRaw(file){
+function loadFbRaw(file,year){
   if(!file) return null;
-  const wbr=X.readFile(file); const fb={};
-  for(let m=1;m<=12;m++){ const ws=wbr.Sheets['Sheet'+m]; if(!ws) continue; fb[m]=fbWeekFromRawSheet(ws); }
+  const wbr=X.readFile(file); const names={}; wbr.SheetNames.forEach(n=>names[n.trim().toUpperCase().replace(/\s+/g,' ')]=n);
+  const yy=String(year).slice(2), fb={};
+  for(let m=1;m<=12;m++){
+    // Tab boleh nama "JAN 26" (CC2 sebenar) ATAU lagacy "Sheet1".."Sheet12" (mirror lama) - cuba dua-dua.
+    let tab=MTAB[m-1].map(b=>names[(b+' '+yy).toUpperCase()]).find(Boolean);
+    if(!tab) tab=names[('SHEET'+m).toUpperCase()];
+    const ws=tab&&wbr.Sheets[tab]; if(!ws) continue;
+    fb[m]=fbWeekFromRawSheet(ws);
+  }
   return fb;
 }
-const FB_RAW=loadFbRaw(A.rawxlsx);
+const FB_RAW=loadFbRaw(A.rawxlsx,YEAR);
 
 const wb = X.readFile(A.xlsx); const names={}; wb.SheetNames.forEach(n=>names[n.trim().toUpperCase().replace(/\s+/g,' ')]=n);
 const yy=String(YEAR).slice(2), now=new Date(Date.now()+8*3600000);
