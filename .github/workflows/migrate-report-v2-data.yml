@@ -1,0 +1,21 @@
+name: Migrate report-v2 data (locks/notes -> KV)
+# SEKALI SAHAJA (one-off): pindahkan locks/notes dari artifact "Report Marketing V2" (B)
+# ke KV Worker report-v2-api. Merge sahaja — tiada data dipadam (newest 'at' menang).
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Migrate locks & notes ke KV
+        working-directory: report-v2/worker
+        run: python3 migrate.py
