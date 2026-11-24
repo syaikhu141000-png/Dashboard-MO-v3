@@ -213,7 +213,8 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end}
 .src .hint{color:var(--mute);margin:8px 0 0}
 .knote{font-size:11px;color:var(--mute);margin-top:4px;line-height:1.35;white-space:normal}
 .tnote{font-size:11px;color:var(--mute);font-weight:400;margin-top:2px;white-space:normal}
-#btnLock,.src{display:none!important}
+.src{display:none!important}
+#btnEdit{margin-right:6px}
 </style>
 </head>
 <body>
@@ -298,7 +299,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end}
 
   <div class="foot">
     <span class="lockinfo" id="lockInfo">Sumber: Meta Ads Manager dan CC5.</span>
-    <div class="btns"><button class="btn" type="button" id="btnLock" data-act="lock" disabled>Kunci sebagai STATIC</button><button class="btn" type="button" data-act="print">Muat turun PDF</button></div>
+    <div class="btns"><button class="btn" type="button" id="btnEdit" data-act="edit">Log masuk edit</button><button class="btn" type="button" id="btnLock" data-act="lock" disabled>Kunci sebagai STATIC</button><button class="btn" type="button" data-act="print">Muat turun PDF</button></div>
   </div>
   <dialog id="dlg" aria-labelledby="dlgT"><h3 id="dlgT"></h3><p id="dlgP"></p><div id="dlgIn" hidden><input id="dlgTxt" autocomplete="off" aria-label="Taip BUKA untuk sahkan" placeholder="Taip BUKA"></div><div class="row"><button class="btn" type="button" data-act="dlgNo">Batal</button><button class="btn pri" type="button" id="dlgYes" data-act="dlgYes">Sahkan</button></div></dialog>
 </div>
@@ -669,7 +670,8 @@ function queueSave(){
 function flushSave(){
   if(!NPEND) return; var o=NPEND; NPEND=null; o.at=new Date().toISOString();
   NOTES[o.key]=o;
-  DB.collection('notes').doc(o.key).set(o).then(function(){ if(NKEY===o.key&&!NPEND) noteStatus('Disimpan '+fmtAt(o.at),'ok'); })
+  fetch(API_BASE+'/api/rv2/note',{method:'POST',headers:rv2Headers(),body:JSON.stringify({key:o.key,data:o})}).then(chkOk)
+    .then(function(){ if(NKEY===o.key&&!NPEND) noteStatus('Disimpan '+fmtAt(o.at),'ok'); })
     .catch(function(e){ noteStatus('Gagal simpan, cuba lagi','err'); });
 }
 function onNotesSnap(snap){
@@ -692,8 +694,7 @@ function updLock(){
   var b=$('btnLock'), li=$('lockInfo'), st=lockState(), open=weeksOfPeriod().some(function(x){return !closed(x[0],x[1]);});
   b.className='btn';
   if(S.type==='tahunan'){ b.disabled=true; b.textContent='Kunci sebagai STATIC'; li.textContent='Kunci STATIC dibuat ikut minggu. Pilih Mingguan, Bulanan atau Suku tahun untuk kunci.'; return; }
-  if(!DB){ b.disabled=true; li.textContent=(st.total?(st.locked?'STATIC terkunci '+st.locked+' daripada '+st.total+'.':'STATIC belum dikunci.'):(open?'Minggu ini belum tamat.':''))+' Paparan public (baca sahaja). Kunci dan catatan diurus dalam Report Marketing V2.'; return; }
-  if(!CAN){ b.disabled=true; b.textContent=st.locked?'STATIC terkunci':'Kunci sebagai STATIC'; li.textContent='Hanya editor boleh kunci atau buka kunci.'; return; }
+  if(!CAN){ b.disabled=true; b.textContent=st.locked?'STATIC terkunci':'Kunci sebagai STATIC'; li.textContent=(st.total?(st.locked?'STATIC terkunci '+st.locked+' daripada '+st.total+'.':'STATIC belum dikunci.'):(open?'Minggu ini belum tamat.':''))+' Tekan "Log masuk edit" (password) untuk kunci atau catat.'; return; }
   if(!st.total){ b.disabled=true; b.textContent='Kunci sebagai STATIC'; li.textContent=open?'Minggu ini belum tamat. Kunci STATIC boleh dibuat selepas minggu tutup.':'Tiada data untuk dikunci.'; return; }
   b.disabled=false;
   if(st.locked===st.total){ b.textContent='Buka kunci STATIC'; b.className='btn dng'; }
@@ -706,22 +707,20 @@ function ask(title,text,needType,yesLabel,yesCls,fn){
   $('dlgT').textContent=title; $('dlgP').textContent=text; $('dlgIn').hidden=!needType; $('dlgTxt').value='';
   var y=$('dlgYes'); y.textContent=yesLabel; y.className='btn '+yesCls; y.disabled=!!needType; PEND=fn; $('dlg').showModal();
 }
+function chkOk(r){ if(!r.ok) return r.json().catch(function(){return null;}).then(function(j){ throw new Error((j&&j.error)||('HTTP '+r.status)); }); return r.json(); }
+function putLock(k,d){ return fetch(API_BASE+'/api/rv2/lock',{method:'POST',headers:rv2Headers(),body:JSON.stringify({doc_id:k,data:d})}).then(chkOk); }
+function delLock(k){ return fetch(API_BASE+'/api/rv2/lock',{method:'POST',headers:rv2Headers(),body:JSON.stringify({doc_id:k,delete:true})}).then(chkOk); }
 function doLock(){
   var st=lockState(), now=new Date().toISOString(), ops=[];
   st.list.forEach(function(x){ var k=lk(x[0],x[1],x[2]); if(LOCKS[k]) return; var v=rawLive(x[0],x[1],x[2]), d={p:x[0],y:YEAR,m:x[1],w:x[2]+1,at:now};
     F.forEach(function(f){ d[f]=v[f]==null?null:v[f]; });
-    ops.push(DB.collection('locks').doc(k).set(d));
-    ops.push(DB.collection('locklog').doc().set({key:k,action:'kunci',at:now})); });
+    LOCKS[k]=d; ops.push(putLock(k,d)); });
   return Promise.all(ops);
 }
 function doUnlock(){
-  var st=lockState(), now=new Date().toISOString(), ops=[];
-  st.list.forEach(function(x){ var k=lk(x[0],x[1],x[2]); if(!LOCKS[k]) return;
-    ops.push(DB.collection('locklog').doc().set({key:k,action:'buka kunci',at:now,lama:LOCKS[k]}));
-    ops.push(DB.collection('locks').doc(k).delete()); });
-  if(S.plat==='ALL'){ var seen={}; st.list.forEach(function(x){ var ka=lk('ALL',x[1],x[2]); if(seen[ka]||!LOCKS[ka]) return; seen[ka]=1;
-    ops.push(DB.collection('locklog').doc().set({key:ka,action:'buka kunci',at:now,lama:LOCKS[ka]}));
-    ops.push(DB.collection('locks').doc(ka).delete()); }); }
+  var st=lockState(), ops=[];
+  st.list.forEach(function(x){ var k=lk(x[0],x[1],x[2]); if(!LOCKS[k]) return; delete LOCKS[k]; ops.push(delLock(k)); });
+  if(S.plat==='ALL'){ var seen={}; st.list.forEach(function(x){ var ka=lk('ALL',x[1],x[2]); if(seen[ka]||!LOCKS[ka]) return; seen[ka]=1; delete LOCKS[ka]; ops.push(delLock(ka)); }); }
   return Promise.all(ops);
 }
 function onLockBtn(){
@@ -925,7 +924,27 @@ function renderSrc(){
   $('srcNote').textContent=(CAN&&DB)?'':'Hanya editor yang log masuk boleh tambah atau tukar link.';
 }
 function saveSources(list){ return DB.collection('config').doc('sources').set({list:list,at:new Date().toISOString()}); }
-function connectDb(){ return Promise.resolve(); }
+var API_BASE='https://mo2-dashboard.syaikhu141000.workers.dev';
+function rv2Pw(){ try{ return sessionStorage.getItem('rv2pw')||''; }catch(e){ return ''; } }
+function rv2Headers(){ var h={'content-type':'application/json'}; var pw=rv2Pw(); if(pw) h['x-rv2-password']=pw; return h; }
+function updEditBtn(){ var b=$('btnEdit'); if(b) b.textContent=CAN?'Log keluar edit':'Log masuk edit'; }
+function doEditToggle(){
+  if(CAN){ CAN=false; try{ sessionStorage.removeItem('rv2pw'); }catch(e){} updEditBtn(); updLock(); if(NKEY) renderNotes({key:NKEY}); return; }
+  var pw=prompt('Password edit:'); if(!pw) return;
+  fetch(API_BASE+'/api/rv2/check',{method:'POST',headers:{'content-type':'application/json','x-rv2-password':pw},body:'{}'})
+    .then(function(r){ return r.json(); }).then(function(j){
+      if(j&&j.ok){ try{ sessionStorage.setItem('rv2pw',pw); }catch(e){} CAN=true; updEditBtn(); updLock(); if(NKEY) renderNotes({key:NKEY}); }
+      else alert('Password salah.');
+    }).catch(function(){ alert('Tak boleh sambung ke server edit.'); });
+}
+function connectDb(){
+  DB=true;
+  var pw=rv2Pw(); if(!pw){ updEditBtn(); return Promise.resolve(); }
+  return fetch(API_BASE+'/api/rv2/check',{method:'POST',headers:{'content-type':'application/json','x-rv2-password':pw},body:'{}'})
+    .then(function(r){ return r.json(); })
+    .then(function(j){ CAN=!!(j&&j.ok); if(!CAN){ try{ sessionStorage.removeItem('rv2pw'); }catch(e){} } updEditBtn(); })
+    .catch(function(){ updEditBtn(); });
+}
 
 /* ---------- PDF ---------- */
 function loadScript(src,test){ if(test()) return Promise.resolve(); return new Promise(function(ok,no){ var sc=document.createElement('script'); sc.src=src; sc.onload=function(){ok();}; sc.onerror=function(){no(new Error('gagal muat '+src));}; document.head.appendChild(sc); }); }
@@ -981,7 +1000,8 @@ document.addEventListener('click',function(e){
   if(a==='print'){ makePdf(b); return; }
   if(a==='reload'){ TODAY=new Date(); loadData().then(function(){ fixSel(); render(); }).catch(function(err){ setBanner('<b>Gagal baca Google Sheet</b> · '+esc(errText(err))+' <button type="button" class="lnk" data-act="reload">Cuba lagi</button>'); }); return; }
   if(a==='dlgNo'){ $('dlg').close(); PEND=null; return; }
-  if(a==='dlgYes'){ var f=PEND; PEND=null; $('dlg').close(); if(f) f().catch(function(err){ alert('Gagal: '+(err&&err.message||err)); }); return; }
+  if(a==='dlgYes'){ var f=PEND; PEND=null; $('dlg').close(); if(f) f().then(function(){ updLock(); render(); }).catch(function(err){ alert('Gagal: '+(err&&err.message||err)); }); return; }
+  if(a==='edit'){ doEditToggle(); return; }
   if(a==='plat'){ S.plat=v; fixSel(); }
   else if(a==='type'){ S.type=v; if(S.cmpMode==='custom'&&S.type!=='mingguan'&&S.type!=='bulanan') S.cmpMode='prev'; }
   else if(a==='cmp'){ S.cmpMode=v; if(v==='custom') setCustomDefault(); }
