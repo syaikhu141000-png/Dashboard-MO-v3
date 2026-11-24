@@ -2,11 +2,11 @@
 // Guna: node build.mjs --xlsx CC5.xlsx --meta meta.json [--metaupd minggu_baru.json] --locks DIR --notes DIR --year 2026 --out data.json [--rawxlsx CC5_WEEKLY.xlsx]
 // - metaupd: {"11-3":{spend,lm,acc,until}} minggu Meta yang baru ditarik (ganti minggu sama dalam meta)
 // - xlsx  : CC5 IMPORTEDDATA (export xlsx dari Google Drive)
-// - rawxlsx: CC5 "SALE & MARKETING REPORT WEEKLY" (Sheet1..Sheet12 = salinan terus CC2, lajur A:K/A:H,
-//            IMPORTRANGE tanpa ubah). Kalau diberi: Leads Sales/Intro/Booking/Enroll Facebook dikira
-//            semula ikut TARIKH SEBENAR dan disimpan BERASINGAN dalam "rawCC2.Facebook" (TIDAK menimpa
-//            "raw.Facebook" — tu kekal CC5 macam asal). Page pilih sumber mana nak papar (toggle
-//            CC5/CC2, default CC5) utk Facebook sahaja; Google/TikTok tiada rawCC2, kekal CC5 je.
+// - rawxlsx: CC2 (database lead sebenar, Sheet1..Sheet12 atau "JAN 26" dll, lajur A:K). Kalau diberi:
+//            Leads Sales/Intro/Booking/Enroll Facebook+Google+TikTok dikira semula ikut TARIKH SEBENAR
+//            dan disimpan BERASINGAN dalam "rawCC2.{Facebook,Google,TikTok}" (TIDAK menimpa "raw.*" —
+//            tu kekal CC5 macam asal). Page pilih sumber mana nak papar (toggle CC5/CC2, default CC5)
+//            untuk mana-mana platform yang ada rawCC2.
 //            lm & spend Facebook tak disentuh langsung oleh rawCC2 (lm dari CC5 ringkasan / spend dari Meta).
 // - meta  : {at, weeks:{"m-w":{spend,lm,...}}}  (spend SEBELUM 8% cukai; page tambah 8%)
 // - locks : folder fail JSON doc "locks" (satu fail satu doc) dari page V2
@@ -69,16 +69,16 @@ function parseMonth(text){
 }
 
 
-/* ---------- Facebook terus dari CC2 (Sheet1..Sheet12 dalam CC5 WEEKLY), ikut tarikh sebenar ---------- */
-const FB_PLATFORMS=['facebook ads','fb ads whatsform'];
-function fbWeekFromRawSheet(ws){
-  // Lajur (sama utk semua bulan, A:K): 0 Column1, 1 Tarikh, 2 Umur, 3 Platform, 4 Keyword, 5 No.Telefon, 6 Category, 7 Status.
+/* ---------- Facebook/Google/TikTok terus dari CC2 (database lead sebenar), ikut tarikh sebenar ----------
+   Lajur (sama utk semua bulan, A:K): 0 Column1, 1 Tarikh, 2 Umur, 3 Platform, 4 Keyword, 5 No.Telefon, 6 Category, 7 Status. */
+const CC2_PLATFORMS={Facebook:['facebook ads','fb ads whatsform'],Google:['google ads'],TikTok:['tiktok ads','tiktok whatsform']};
+function cc2WeekFromRawSheet(ws,platList){
   const rows=X.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
   const out=[{ls:0,intro:0,book:0,enrol:0},{ls:0,intro:0,book:0,enrol:0},{ls:0,intro:0,book:0,enrol:0},{ls:0,intro:0,book:0,enrol:0}];
   for(let i=1;i<rows.length;i++){
     const r=rows[i];
     const p=String(r[3]||'').trim().toLowerCase();
-    if(!FB_PLATFORMS.includes(p)) continue;
+    if(!platList.includes(p)) continue;
     const d=r[1]; let dd=null;
     if(typeof d==='number'){ const dt=new Date(Math.round((d-25569)*86400000)); dd=dt.getUTCDate(); }
     else if(d!=null){ const t=String(d).trim().match(/^(\d{1,2})[.\/\-]/); if(t) dd=+t[1]; }
@@ -92,20 +92,22 @@ function fbWeekFromRawSheet(ws){
   }
   return out;
 }
-function loadFbRaw(file,year){
+function loadCc2Raw(file,year){
   if(!file) return null;
   const wbr=X.readFile(file); const names={}; wbr.SheetNames.forEach(n=>names[n.trim().toUpperCase().replace(/\s+/g,' ')]=n);
-  const yy=String(year).slice(2), fb={};
+  const yy=String(year).slice(2);
+  const out={}; // {Facebook:{m:[...]},Google:{...},TikTok:{...}}
+  for(const plat in CC2_PLATFORMS) out[plat]={};
   for(let m=1;m<=12;m++){
     // Tab boleh nama "JAN 26" (CC2 sebenar) ATAU lagacy "Sheet1".."Sheet12" (mirror lama) - cuba dua-dua.
     let tab=MTAB[m-1].map(b=>names[(b+' '+yy).toUpperCase()]).find(Boolean);
     if(!tab) tab=names[('SHEET'+m).toUpperCase()];
     const ws=tab&&wbr.Sheets[tab]; if(!ws) continue;
-    fb[m]=fbWeekFromRawSheet(ws);
+    for(const plat in CC2_PLATFORMS) out[plat][m]=cc2WeekFromRawSheet(ws,CC2_PLATFORMS[plat]);
   }
-  return fb;
+  return out;
 }
-const FB_RAW=loadFbRaw(A.rawxlsx,YEAR);
+const CC2_RAW=loadCc2Raw(A.rawxlsx,YEAR);
 
 const wb = X.readFile(A.xlsx); const names={}; wb.SheetNames.forEach(n=>names[n.trim().toUpperCase().replace(/\s+/g,' ')]=n);
 const yy=String(YEAR).slice(2), now=new Date(Date.now()+8*3600000);
@@ -118,19 +120,21 @@ for(let m=1;m<=lastM;m++){
   tabs[m]=tab;
 }
 
-/* rawCC2.Facebook[m] = [{ls,intro,book,enrol}x4] — BERASINGAN drpd raw.Facebook (CC5), tak menimpa apa-apa.
+/* rawCC2.Facebook/Google/TikTok[m] = [{ls,intro,book,enrol}x4] — BERASINGAN drpd raw.* (CC5), tak menimpa apa-apa.
    Minggu yg belum bermula (tarikh akan datang) = null (tiada data direka). Page yg pilih nak papar CC2 ke CC5. */
 const rawCC2={};
-if(FB_RAW){
-  rawCC2.Facebook={};
-  for(const m in FB_RAW){
-    rawCC2.Facebook[m]=[0,1,2,3].map(w=>{
-      const weekStartDay=w*7+1; // W1=1, W2=8, W3=15, W4=22
-      const weekStarted=new Date(Date.UTC(YEAR,m-1,weekStartDay))<=now;
-      if(!weekStarted) return null;
-      const fw=FB_RAW[m][w];
-      return {ls:fw.ls,intro:fw.intro,book:fw.book,enrol:fw.enrol};
-    });
+if(CC2_RAW){
+  for(const plat in CC2_RAW){
+    const src=CC2_RAW[plat]; rawCC2[plat]={};
+    for(const m in src){
+      rawCC2[plat][m]=[0,1,2,3].map(w=>{
+        const weekStartDay=w*7+1; // W1=1, W2=8, W3=15, W4=22
+        const weekStarted=new Date(Date.UTC(YEAR,m-1,weekStartDay))<=now;
+        if(!weekStarted) return null;
+        const fw=src[m][w];
+        return {ls:fw.ls,intro:fw.intro,book:fw.book,enrol:fw.enrol};
+      });
+    }
   }
 }
 pl.sort((a,b)=>['Facebook','Google','TikTok'].indexOf(a)-['Facebook','Google','TikTok'].indexOf(b));
@@ -141,6 +145,6 @@ if(A.metaupd){ const u=JSON.parse(fs.readFileSync(A.metaupd,'utf8')); for(const 
 const locks=readDir(A.locks), notes=readDir(A.notes);
 for(const k in locks) for(const f of ['version','id','createdAt','updatedAt']) delete locks[k][f];
 const out={y:YEAR,at:new Date().toISOString(),pl,raw,rawCC2,tabs,meta,locks,notes,
-  src:"CC5 IMPORTEDDATA + Meta Ads (MO2+MO4+MO05)"+(FB_RAW?" + CC2 terus tersedia sbg pilihan (Facebook, toggle CC5/CC2 di page)":"")};
+  src:"CC5 IMPORTEDDATA + Meta Ads (MO2+MO4+MO05)"+(CC2_RAW?" + CC2 terus tersedia sbg pilihan (toggle CC5/CC2 di page, semua platform)":"")};
 fs.writeFileSync(A.out||'data.json',JSON.stringify(out));
-console.log(JSON.stringify({ok:true,year:YEAR,tabs,miss,pl,metaWeeks:Object.keys(meta.weeks).length,metaAt:meta.at,locks:Object.keys(locks).length,notes:Object.keys(notes).length,fbRawMonths:FB_RAW?Object.keys(FB_RAW).length:0}));
+console.log(JSON.stringify({ok:true,year:YEAR,tabs,miss,pl,metaWeeks:Object.keys(meta.weeks).length,metaAt:meta.at,locks:Object.keys(locks).length,notes:Object.keys(notes).length,cc2RawMonths:CC2_RAW?Object.keys(CC2_RAW.Facebook||{}).length:0}));

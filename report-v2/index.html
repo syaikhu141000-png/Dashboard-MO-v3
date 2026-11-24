@@ -213,7 +213,6 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end}
 .src .hint{color:var(--mute);margin:8px 0 0}
 .knote{font-size:11px;color:var(--mute);margin-top:4px;line-height:1.35;white-space:normal}
 .tnote{font-size:11px;color:var(--mute);font-weight:400;margin-top:2px;white-space:normal}
-.src{display:none!important}
 #btnEdit{margin-right:6px}
 </style>
 </head>
@@ -228,7 +227,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end}
       <button type="button" data-act="theme" data-v="system" aria-pressed="false" title="Ikut tetapan peranti"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="theme-label">Auto</span></button>
     </div>
     <div class="seg" id="platSeg" role="group" aria-label="Platform"></div>
-    <div class="seg" id="srcSeg" role="group" aria-label="Sumber data Facebook" hidden></div>
+    <div class="seg" id="srcSeg" role="group" aria-label="Sumber data platform" hidden></div>
     <div class="seg" id="typeSeg" role="group" aria-label="Jenis report"></div>
     <label class="sel" id="selYearW" hidden>Tahun <select id="selYear"></select></label>
     <label class="sel" id="selMonthW">Bulan <select id="selMonth"></select></label>
@@ -287,20 +286,22 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end}
   </section>
 
   <details class="src">
-    <summary>Sumber data (Google Sheet ikut tahun)</summary>
-    <ul id="srcList"></ul>
+    <summary>Sumber data (Google Sheet CC5/CC2 ikut tahun)</summary>
+    <p class="hint" style="margin-top:0">CC5 (ringkasan): <ul id="srcList" style="margin:4px 0 10px"></ul></p>
+    <p class="hint">CC2 (database lead): <ul id="srcListCc2" style="margin:4px 0 10px"></ul></p>
     <div id="srcForm" hidden>
+      <label class="sel">Sumber <select id="srcKind"><option value="cc5">CC5 (ringkasan)</option><option value="cc2">CC2 (database lead)</option></select></label>
       <label class="sel">Tahun <input id="srcYear" type="number" min="2020" max="2100" value="2027" inputmode="numeric"></label>
       <label class="sel grow">Link Google Sheet <input id="srcLink" type="url" placeholder="https://docs.google.com/spreadsheets/d/..."></label>
       <button class="btn pri" type="button" data-act="srcadd">Simpan sumber</button>
     </div>
     <p class="hint" id="srcMsg"></p>
-    <p class="hint">Syarat: sheet boleh dibuka oleh akaun Google Drive kau; satu tab satu bulan bernama "JAN 27", "FEB 27" dan seterusnya; susun atur sama seperti CC5 (blok FACEBOOK, GOOGLE, TIKTOK; minggu di lajur C, E, G, I). <span id="srcNote"></span></p>
+    <p class="hint">Syarat: sheet boleh dibuka oleh sesiapa dengan link (Anyone with the link: Viewer); satu tab satu bulan bernama "JAN 27", "FEB 27" dan seterusnya; CC5 susun atur blok FACEBOOK/GOOGLE/TIKTOK (minggu di lajur C, E, G, I), CC2 susun atur lajur A:K (Platform di C, Status di H). <span id="srcNote"></span></p>
   </details>
 
   <div class="foot">
     <span class="lockinfo" id="lockInfo">Sumber: Meta Ads Manager dan CC5.</span>
-    <div class="btns"><button class="btn" type="button" id="btnEdit" data-act="edit">Log masuk edit</button><button class="btn" type="button" id="btnLock" data-act="lock" disabled>Kunci sebagai STATIC</button><button class="btn" type="button" data-act="print">Muat turun PDF</button></div>
+    <div class="btns"><button class="btn" type="button" id="btnEdit" data-act="edit">Log masuk edit</button><button class="btn" type="button" id="btnLock" data-act="lock" disabled>Kunci sebagai STATIC</button><button class="btn" type="button" id="btnLockAll" data-act="lockall" disabled hidden>Kunci semua platform</button><button class="btn" type="button" data-act="print">Muat turun PDF</button></div>
   </div>
   <dialog id="dlg" aria-labelledby="dlgT"><h3 id="dlgT"></h3><p id="dlgP"></p><div id="dlgIn" hidden><input id="dlgTxt" autocomplete="off" aria-label="Taip BUKA untuk sahkan" placeholder="Taip BUKA"></div><div class="row"><button class="btn" type="button" data-act="dlgNo">Batal</button><button class="btn pri" type="button" id="dlgYes" data-act="dlgYes">Sahkan</button></div></dialog>
 </div>
@@ -314,12 +315,14 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end}
    Page baca setiap tab terus (live) dan ambil blok FACEBOOK, GOOGLE, TIKTOK.
    Sel kosong dalam sheet = kosong dalam page. Tiada nombor direka.        */
 var DEFAULT_SOURCES=[{y:2026,id:'1g3d2iXZBRQnl9E8S9gLxDFI2eEfiTMtf7RPPYCatOQE'}];
-var CC2_SHEET_ID='1bgTcEpZPJjqKlWwkYNl9GC6f263XqLUTe0ukbwtgY_g'; /* CC2 sebenar (database lead) - live, utk Facebook Leads Sales/Intro/Booking/Enroll */
+var DEFAULT_CC2_SOURCES=[{y:2026,id:'1bgTcEpZPJjqKlWwkYNl9GC6f263XqLUTe0ukbwtgY_g'}]; /* CC2 sebenar (database lead) - live, utk Leads Sales/Intro/Booking/Enroll */
 var SOURCES=DEFAULT_SOURCES.slice();
+var CC2_SOURCES=DEFAULT_CC2_SOURCES.slice();
+var CC2_SHEET_ID=DEFAULT_CC2_SOURCES[0].id;
 /* Nama tab ikut bulan + 2 digit tahun, contoh "OKT 26", "JAN 27". Nama alternatif dicuba jika yang pertama tiada. */
 var MTAB=[['JAN'],['FEB'],['MAC','MAR'],['APRIL','APR'],['MEI','MAY'],['JUN'],['JULAI','JUL'],['OGOS','AUG'],['SEPT','SEP'],['OKT','OCT'],['NOV'],['DIS','DEC']];
 var SECT={FACEBOOK:'Facebook',GOOGLE:'Google',TIKTOK:'TikTok'};
-var YEAR=2026, SHEET_ID=SOURCES[0].id, TODAY=new Date();
+var YEAR=2026, SHEET_ID=SOURCES[0].id, TODAY=new Date(), FIRST_LOAD=true;
 
 function $(id){return document.getElementById(id);}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -386,16 +389,16 @@ function parseMonth(text){
   return out;
 }
 
-/* ---------- Facebook terus dari CC2 (database lead sebenar), ikut tarikh sebenar -----------
+/* ---------- Facebook/Google/TikTok terus dari CC2 (database lead sebenar), ikut tarikh sebenar -----------
    Lajur (sama utk semua bulan, A:K): 0 Column1, 1 Tarikh, 2 Umur, 3 Platform, 4 Keyword,
-   5 No.Telefon, 6 Category, 7 Status. Baris header ("Platform" dll) tak match FB_PLATFORMS,
+   5 No.Telefon, 6 Category, 7 Status. Baris header ("Platform" dll) tak match CC2_PLATFORMS,
    jadi tersisih sendiri tanpa perlu kesan khas. */
-var FB_PLATFORMS=['facebook ads','fb ads whatsform'];
-function fbWeekFromCsvRows(rows){
+var CC2_PLATFORMS={Facebook:['facebook ads','fb ads whatsform'],Google:['google ads'],TikTok:['tiktok ads','tiktok whatsform']};
+function cc2WeekFromCsvRows(rows,platList){
   var out=[{ls:0,intro:0,book:0,enrol:0},{ls:0,intro:0,book:0,enrol:0},{ls:0,intro:0,book:0,enrol:0},{ls:0,intro:0,book:0,enrol:0}];
   rows.forEach(function(r){
     var p=String(r[3]||'').trim().toLowerCase();
-    if(FB_PLATFORMS.indexOf(p)<0) return;
+    if(platList.indexOf(p)<0) return;
     var d=r[1], dd=null, t;
     if(d!=null){ t=String(d).trim().match(/^(\d{1,2})[.\/\-]/); if(t) dd=+t[1]; }
     if(dd==null) return;
@@ -410,22 +413,26 @@ function fbWeekFromCsvRows(rows){
 }
 function loadLiveCC2(id,year){
   var yy=String(year).slice(2), lastM=TODAY.getFullYear()>year?12:(TODAY.getFullYear()<year?0:TODAY.getMonth()+1);
-  var fb={}, miss=[], got=0;
+  var out={}, miss=[], got=0;
+  for(var plat in CC2_PLATFORMS) out[plat]={};
   var jobs=[]; for(var m=1;m<=lastM;m++) jobs.push(m);
   return Promise.all(jobs.map(function(m){
     var cands=MTAB[m-1].map(function(b){ return b+' '+yy; });
     return fetchTabLiveCsv(id,cands).then(function(text){
-      var weeks=fbWeekFromCsvRows(parseCSV(text));
-      fb[m]=[0,1,2,3].map(function(w){
-        var start=new Date(YEAR,m-1,[1,8,15,22][w]);
-        if(start>TODAY) return null; // minggu belum bermula - kekal kosong, tiada reka angka
-        return weeks[w];
-      });
+      var rows=parseCSV(text);
+      for(var plat in CC2_PLATFORMS){
+        var weeks=cc2WeekFromCsvRows(rows,CC2_PLATFORMS[plat]);
+        out[plat][m]=[0,1,2,3].map(function(w){
+          var start=new Date(YEAR,m-1,[1,8,15,22][w]);
+          if(start>TODAY) return null; // minggu belum bermula - kekal kosong, tiada reka angka
+          return weeks[w];
+        });
+      }
       got++;
     }).catch(function(){ miss.push(MN[m-1]); });
   })).then(function(){
     if(!got) throw new Error('tiada tab '+year+' CC2 dapat dibaca live');
-    return {Facebook:fb,miss:miss};
+    return {raw:out,miss:miss};
   });
 }
 
@@ -439,8 +446,8 @@ var TXT={};
 function hasAny(v){ if(!v) return false; for(var i=0;i<F.length;i++) if(v[F[i]]!=null) return true; return false; }
 function rawLive(p,m,w){
   var v=RAW[p]&&RAW[p][m]&&RAW[p][m][w];
-  if(p==='Facebook'&&SRC_PREF==='cc2'){
-    var c=RAW_CC2.Facebook&&RAW_CC2.Facebook[m]&&RAW_CC2.Facebook[m][w];
+  if(SRC_PREF==='cc2'&&RAW_CC2[p]){
+    var c=RAW_CC2[p][m]&&RAW_CC2[p][m][w];
     if(c) v=Object.assign({},v,{ls:c.ls,intro:c.intro,book:c.book,enrol:c.enrol});
   }
   return hasAny(v)?v:null;
@@ -579,7 +586,7 @@ function renderBar(){
   var pl=['Facebook'].concat(PL.filter(function(p){return p!=='Facebook';})).concat(['ALL']);
   $('platSeg').innerHTML=pl.map(function(p){return '<button type="button" data-act="plat" data-v="'+esc(p)+'" aria-pressed="'+(S.plat===p)+'">'+esc(p==='ALL'?'Digital Marketing':p)+'</button>';}).join('');
   $('brandPlat').textContent=S.plat==='ALL'?'DIGITAL MARKETING':String(S.plat).toUpperCase();
-  var sg=$('srcSeg'), showSrc=(S.plat==='Facebook'&&RAW_CC2.Facebook);
+  var sg=$('srcSeg'), showSrc=(S.plat!=='ALL'&&RAW_CC2[S.plat]);
   sg.hidden=!showSrc;
   if(showSrc) sg.innerHTML=['cc5','cc2'].map(function(v){return '<button type="button" data-act="srcpref" data-v="'+v+'" aria-pressed="'+(SRC_PREF===v)+'" title="'+(v==='cc5'?'CC5 (ringkasan, lajur minggu)':'CC2 (database lead, terus ikut tarikh)')+'">'+v.toUpperCase()+'</button>';}).join('');
   var ys=SOURCES.map(function(x){return x.y;}).sort();
@@ -624,7 +631,7 @@ function render(){
   var P=period(), c=P.live, C=comparison(P), cmp=!!C, st=status();
   $('hType').textContent={mingguan:'Report mingguan',bulanan:'Report bulanan',suku:'Report suku tahun',tahunan:'Report overall tahun'}[S.type]+' · '+PLN(S.plat);
   $('hTitle').textContent=S.type==='mingguan'?'W'+(S.week+1)+' '+MFULL[S.month-1]+' '+YEAR:S.type==='bulanan'?MFULL[S.month-1]+' '+YEAR:S.type==='tahunan'?'Overall '+YEAR:'Suku '+S.q+' '+YEAR;
-  $('hSub').textContent=range()+(S.plat==='Facebook'&&RAW_CC2.Facebook?(SRC_PREF==='cc2'?' · Leads Sales/Intro/Booking/Enroll: CC2 terus (ikut tarikh)':' · Leads Sales/Intro/Booking/Enroll: CC5 (ringkasan)'):'');
+  $('hSub').textContent=range()+(S.plat!=='ALL'&&RAW_CC2[S.plat]?(SRC_PREF==='cc2'?' · Leads Sales/Intro/Booking/Enroll: CC2 terus (ikut tarikh)':' · Leads Sales/Intro/Booking/Enroll: CC5 (ringkasan)'):'');
   var hs=$('hState'); hs.textContent=st.t; hs.className='state'+(st.open?' open':'');
 
   /* Banding dengan tempoh pilihan: utamakan STATIC; jika belum dikunci, guna LIVE dan label jelas. */
@@ -742,12 +749,14 @@ function onNotesSnap(snap){
 }
 
 /* ---------- kunci STATIC ---------- */
-function lockTargets(){ /* [p,m,w] minggu yang dah tutup dan ada data */
+function lockTargetsFor(plats){ /* [p,m,w] minggu yang dah tutup dan ada data, utk senarai platform ni */
   var L=[];
-  weeksOfPeriod().forEach(function(x){ if(!closed(x[0],x[1])) return; platsFor().forEach(function(p){ if(rawLive(p,x[0],x[1])) L.push([p,x[0],x[1]]); }); });
+  weeksOfPeriod().forEach(function(x){ if(!closed(x[0],x[1])) return; plats.forEach(function(p){ if(rawLive(p,x[0],x[1])) L.push([p,x[0],x[1]]); }); });
   return L;
 }
-function lockState(){ var L=lockTargets(), n=0; L.forEach(function(x){ if(LOCKS[lk(x[0],x[1],x[2])]) n++; }); return {total:L.length,locked:n,list:L}; }
+function lockTargets(){ return lockTargetsFor(platsFor()); }
+function lockStateFor(plats){ var L=lockTargetsFor(plats), n=0; L.forEach(function(x){ if(LOCKS[lk(x[0],x[1],x[2])]) n++; }); return {total:L.length,locked:n,list:L}; }
+function lockState(){ return lockStateFor(platsFor()); }
 function updLock(){
   var b=$('btnLock'), li=$('lockInfo'), st=lockState(), open=weeksOfPeriod().some(function(x){return !closed(x[0],x[1]);});
   b.className='btn';
@@ -759,6 +768,18 @@ function updLock(){
   else { b.textContent=st.locked?'Kunci baki ('+(st.total-st.locked)+')':'Kunci sebagai STATIC'; b.className='btn pri'; }
   var when='', imp=''; st.list.forEach(function(x){var d=LOCKS[lk(x[0],x[1],x[2])]; if(d&&d.at&&(!when||d.at>when)) when=d.at; if(d&&d.src) imp=d.src;});
   li.textContent=(st.locked?('STATIC terkunci '+st.locked+' daripada '+st.total+(st.total>1?' (platform × minggu)':'')+(when?' · '+new Date(when).toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'')+'.'):'STATIC belum dikunci.')+(imp?' Sumber STATIC: '+imp+'.':'')+(open?' Minggu yang belum tamat tidak dikunci.':'');
+  updLockAll();
+}
+function updLockAll(){
+  var b=$('btnLockAll'); if(!b) return;
+  if(S.type==='tahunan'||PL.length<2){ b.hidden=true; return; }
+  b.hidden=false; b.className='btn';
+  if(!CAN){ b.disabled=true; b.textContent='Kunci semua platform'; return; }
+  var st=lockStateFor(PL);
+  if(!st.total){ b.disabled=true; b.textContent='Kunci semua platform'; return; }
+  b.disabled=false;
+  if(st.locked===st.total){ b.textContent='Buka kunci semua platform'; b.className='btn dng'; }
+  else { b.textContent=st.locked?'Kunci semua platform (baki '+(st.total-st.locked)+')':'Kunci semua platform'; b.className='btn pri'; }
 }
 var PEND=null;
 function ask(title,text,needType,yesLabel,yesCls,fn){
@@ -768,23 +789,29 @@ function ask(title,text,needType,yesLabel,yesCls,fn){
 function chkOk(r){ if(!r.ok) return r.json().catch(function(){return null;}).then(function(j){ throw new Error((j&&j.error)||('HTTP '+r.status)); }); return r.json(); }
 function putLock(k,d){ return fetch(API_BASE+'/api/rv2/lock',{method:'POST',headers:rv2Headers(),body:JSON.stringify({doc_id:k,data:d})}).then(chkOk); }
 function delLock(k){ return fetch(API_BASE+'/api/rv2/lock',{method:'POST',headers:rv2Headers(),body:JSON.stringify({doc_id:k,delete:true})}).then(chkOk); }
-function doLock(){
-  var st=lockState(), now=new Date().toISOString(), ops=[];
+function doLockSt(st){
+  var now=new Date().toISOString(), ops=[];
   st.list.forEach(function(x){ var k=lk(x[0],x[1],x[2]); if(LOCKS[k]) return; var v=rawLive(x[0],x[1],x[2]), d={p:x[0],y:YEAR,m:x[1],w:x[2]+1,at:now};
     F.forEach(function(f){ d[f]=v[f]==null?null:v[f]; });
     LOCKS[k]=d; ops.push(putLock(k,d)); });
   return Promise.all(ops);
 }
-function doUnlock(){
-  var st=lockState(), ops=[];
+function doUnlockSt(st){
+  var ops=[];
   st.list.forEach(function(x){ var k=lk(x[0],x[1],x[2]); if(!LOCKS[k]) return; delete LOCKS[k]; ops.push(delLock(k)); });
-  if(S.plat==='ALL'){ var seen={}; st.list.forEach(function(x){ var ka=lk('ALL',x[1],x[2]); if(seen[ka]||!LOCKS[ka]) return; seen[ka]=1; delete LOCKS[ka]; ops.push(delLock(ka)); }); }
   return Promise.all(ops);
 }
+function doLock(){ return doLockSt(lockState()); }
+function doUnlock(){ return doUnlockSt(lockState()); }
 function onLockBtn(){
   var st=lockState(); if(!st.total) return; var P=period();
   if(st.locked===st.total) ask('Buka kunci STATIC '+P.short+'?','STATIC '+P.short+' akan dipadam. Kalau kunci semula, STATIC ambil angka LIVE pada masa itu dan mungkin berbeza. Tindakan ini dicatat dalam log.',true,'Buka kunci','dng',doUnlock);
   else ask('Kunci STATIC '+P.short+'?','Angka LIVE sekarang akan disimpan sebagai STATIC dan tidak berubah lagi. Sel kosong kekal kosong. Buka kunci kemudian perlu pengesahan.',false,'Kunci sekarang','pri',doLock);
+}
+function onLockAllBtn(){
+  var st=lockStateFor(PL); if(!st.total) return; var P=period();
+  if(st.locked===st.total) ask('Buka kunci STATIC semua platform ('+P.short+')?','STATIC '+P.short+' utk SEMUA platform ('+PL.join(', ')+') akan dipadam. Tindakan ini dicatat dalam log.',true,'Buka kunci','dng',function(){ return doUnlockSt(st); });
+  else ask('Kunci STATIC semua platform ('+P.short+')?','Angka LIVE sekarang utk SEMUA platform ('+PL.join(', ')+') akan disimpan sebagai STATIC sekali gus. Sel kosong kekal kosong.',false,'Kunci sekarang','pri',function(){ return doLockSt(st); });
 }
 
 /* ---------- muat data ---------- */
@@ -977,19 +1004,20 @@ function loadData(){
      (sheet private/network), fallback guna snapshot data.json macam asal supaya page tetap jalan. */
   setBanner('Memuatkan data…');
   return fetch('data.json?t='+Date.now(),{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('data.json HTTP '+r.status); return r.json(); }).then(function(x){
-    YEAR=x.y;
+    if(FIRST_LOAD){ YEAR=x.y; FIRST_LOAD=false; } /* lepas ni, YEAR ikut pilihan pengguna (switchYear), bukan ditimpa semula */
     var snapRaw={}, snapPl=(x.pl||[]).slice();
     snapPl.forEach(function(p){ snapRaw[p]={}; var src=(x.raw||{})[p]||{}; for(var m in src) snapRaw[p][+m]=src[m].map(function(w){ return Object.assign({},w); }); });
-    RAW_CC2={}; var src2=(x.rawCC2&&x.rawCC2.Facebook)||{}; RAW_CC2.Facebook={}; for(var m2 in src2) RAW_CC2.Facebook[+m2]=src2[m2];
+    RAW_CC2={}; var src2=x.rawCC2||{}; for(var plat2 in src2){ RAW_CC2[plat2]={}; for(var m2 in src2[plat2]) RAW_CC2[plat2][+m2]=src2[plat2][m2]; }
     META=(x.meta&&x.meta.weeks)||{}; META_AT=(x.meta&&x.meta.at)||null; LOCKS=x.locks||{}; NOTES=x.notes||{};
     var snapAt=x.at;
     var p5=loadLiveCC5(SHEET_ID,YEAR).then(function(live){ return {ok:true,live:live}; }).catch(function(){ return {ok:false}; });
-    var p2=loadLiveCC2(CC2_SHEET_ID,YEAR).then(function(live){ return {ok:true,live:live}; }).catch(function(){ return {ok:false}; });
+    var p2=!CC2_SHEET_ID?Promise.resolve({ok:false,none:true}):loadLiveCC2(CC2_SHEET_ID,YEAR).then(function(live){ return {ok:true,live:live}; }).catch(function(){ return {ok:false}; });
     return Promise.all([p5,p2]).then(function(rs){
       var r5=rs[0], r2=rs[1], cc5Note, cc2Note;
       if(r5.ok){ RAW=r5.live.raw; PL=r5.live.pl; cc5Note='LIVE'+(r5.live.miss.length?' (tab tiada: '+esc(r5.live.miss.join(', '))+')':''); }
       else { RAW=snapRaw; PL=snapPl; cc5Note='snapshot '+new Date(snapAt).toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' (live gagal)'; }
-      if(r2.ok){ RAW_CC2.Facebook=Object.assign({},RAW_CC2.Facebook,r2.live.Facebook); cc2Note='LIVE'+(r2.live.miss.length?' (tab tiada: '+esc(r2.live.miss.join(', '))+')':''); }
+      if(r2.ok){ for(var plat3 in r2.live.raw) RAW_CC2[plat3]=Object.assign({},RAW_CC2[plat3],r2.live.raw[plat3]); cc2Note='LIVE'+(r2.live.miss.length?' (tab tiada: '+esc(r2.live.miss.join(', '))+')':''); }
+      else if(r2.none){ cc2Note='tiada sumber utk '+YEAR; }
       else { cc2Note='snapshot (live gagal)'; }
       applyMeta(); READY=true;
       SHEETB='CC5: <b>'+cc5Note+'</b> · CC2: <b>'+cc2Note+'</b> · dikemas kini '+new Date().toLocaleString('en-MY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' · <button type="button" class="lnk" data-act="reload">Muat semula</button>';
@@ -1020,29 +1048,45 @@ function fixSel(){
   while(S.cmpWeek>0&&!liveW(S.cmpMonth,S.cmpWeek)) S.cmpWeek--;
 }
 function srcFor(y){ for(var i=0;i<SOURCES.length;i++) if(SOURCES[i].y===y) return SOURCES[i]; return null; }
+function cc2SrcFor(y){ for(var i=0;i<CC2_SOURCES.length;i++) if(CC2_SOURCES[i].y===y) return CC2_SOURCES[i]; return null; }
 function switchYear(y){
   var sc=srcFor(y); if(!sc) return; YEAR=y; SHEET_ID=sc.id; TXT={};
+  var c2=cc2SrcFor(y); CC2_SHEET_ID=c2?c2.id:null;
   loadData().then(function(){ pickDefault(); render(); }).catch(function(err){ READY=false; clearView(); setBanner('<b>Gagal baca Google Sheet '+y+'</b> · '+esc(errText(err))+' Semak link dan nama tab. <button type="button" class="lnk" data-act="reload">Muat semula</button>'); renderSrc(); });
 }
 function clearView(){ ['kpis','second','compareVisual','monthlyOverview','tbl','sum','notes'].forEach(function(id){ $(id).innerHTML=''; }); $('compareVisualW').hidden=true; $('monthlyOverviewW').hidden=true; $('hTitle').textContent=''; $('hSub').textContent=''; $('hState').textContent=''; }
 function sheetId(link){ var m=String(link).match(/\/d\/([a-zA-Z0-9_-]{20,})/); if(m) return m[1]; return /^[a-zA-Z0-9_-]{20,}$/.test(String(link).trim())?String(link).trim():null; }
-function renderSrc(){
-  var ys=SOURCES.slice().sort(function(a,b){return a.y-b.y;});
-  $('srcList').innerHTML=ys.map(function(x){ return '<li><b>'+x.y+'</b> <a href="https://docs.google.com/spreadsheets/d/'+esc(x.id)+'/edit" target="_blank" rel="noopener">Buka sheet</a>'+(CAN&&DB&&ys.length>1?' <button type="button" class="lnk" data-act="srcdel" data-v="'+x.y+'">Buang</button>':'')+'</li>'; }).join('');
-  $('srcForm').hidden=!(CAN&&DB);
-  $('srcNote').textContent=(CAN&&DB)?'':'Hanya editor yang log masuk boleh tambah atau tukar link.';
+function srcListHtml(list,kind){
+  var ys=list.slice().sort(function(a,b){return a.y-b.y;});
+  return ys.map(function(x){ return '<li><b>'+x.y+'</b> <a href="https://docs.google.com/spreadsheets/d/'+esc(x.id)+'/edit" target="_blank" rel="noopener">Buka sheet</a>'+(CAN?' <button type="button" class="lnk" data-act="srcdel" data-kind="'+kind+'" data-v="'+x.y+'">Buang</button>':'')+'</li>'; }).join('');
 }
-function saveSources(list){ return DB.collection('config').doc('sources').set({list:list,at:new Date().toISOString()}); }
+function renderSrc(){
+  $('srcList').innerHTML=srcListHtml(SOURCES,'cc5');
+  $('srcListCc2').innerHTML=srcListHtml(CC2_SOURCES,'cc2');
+  $('srcForm').hidden=!CAN;
+  $('srcNote').textContent=CAN?'':'Hanya editor yang log masuk boleh tambah atau tukar link.';
+}
 var API_BASE='https://report-v2-api.syaikhu141000.workers.dev';
+function saveSource(kind,year,id,del){
+  var body={kind:kind,year:year}; if(del) body.delete=true; else body.id=id;
+  return fetch(API_BASE+'/api/rv2/sources',{method:'POST',headers:rv2Headers(),body:JSON.stringify(body)}).then(chkOk);
+}
+function fetchSources(){
+  return fetch(API_BASE+'/api/rv2/sources',{cache:'no-store'}).then(function(r){ return r.ok?r.json():{cc5:{},cc2:{}}; }).catch(function(){ return {cc5:{},cc2:{}}; }).then(function(x){
+    var m5=x.cc5||{}, m2=x.cc2||{};
+    SOURCES=DEFAULT_SOURCES.filter(function(d){ return !m5[String(d.y)]; }).concat(Object.keys(m5).map(function(y){ return {y:+y,id:m5[y]}; }));
+    CC2_SOURCES=DEFAULT_CC2_SOURCES.filter(function(d){ return !m2[String(d.y)]; }).concat(Object.keys(m2).map(function(y){ return {y:+y,id:m2[y]}; }));
+  });
+}
 function rv2Pw(){ try{ return sessionStorage.getItem('rv2pw')||''; }catch(e){ return ''; } }
 function rv2Headers(){ var h={'content-type':'application/json'}; var pw=rv2Pw(); if(pw) h['x-rv2-password']=pw; return h; }
 function updEditBtn(){ var b=$('btnEdit'); if(b) b.textContent=CAN?'Log keluar edit':'Log masuk edit'; }
 function doEditToggle(){
-  if(CAN){ CAN=false; try{ sessionStorage.removeItem('rv2pw'); }catch(e){} updEditBtn(); updLock(); if(NKEY) renderNotes({key:NKEY}); return; }
+  if(CAN){ CAN=false; try{ sessionStorage.removeItem('rv2pw'); }catch(e){} updEditBtn(); updLock(); if(NKEY) renderNotes({key:NKEY}); renderSrc(); return; }
   var pw=prompt('Password edit:'); if(!pw) return;
   fetch(API_BASE+'/api/rv2/check',{method:'POST',headers:{'content-type':'application/json','x-rv2-password':pw},body:'{}'})
     .then(function(r){ return r.json(); }).then(function(j){
-      if(j&&j.ok){ try{ sessionStorage.setItem('rv2pw',pw); }catch(e){} CAN=true; updEditBtn(); updLock(); if(NKEY) renderNotes({key:NKEY}); }
+      if(j&&j.ok){ try{ sessionStorage.setItem('rv2pw',pw); }catch(e){} CAN=true; updEditBtn(); updLock(); if(NKEY) renderNotes({key:NKEY}); renderSrc(); }
       else alert('Password salah.');
     }).catch(function(){ alert('Tak boleh sambung ke server edit.'); });
 }
@@ -1095,17 +1139,23 @@ document.addEventListener('click',function(e){
   if(a==='theme'){ applyTheme(v,true); return; }
   if(a==='monthcard'){ S.type='bulanan'; S.month=parseInt(v,10); S.cmpMode='prev'; fixSel(); render(); document.querySelector('.hero').scrollIntoView({behavior:'smooth',block:'start'}); return; }
   if(a==='lock'){ onLockBtn(); return; }
+  if(a==='lockall'){ onLockAllBtn(); return; }
   if(a==='srcadd'){
-    var y=parseInt($('srcYear').value,10), id=sheetId($('srcLink').value), msg=$('srcMsg');
+    var kind=$('srcKind').value, y=parseInt($('srcYear').value,10), id=sheetId($('srcLink').value), msg=$('srcMsg');
+    var kindLabel=kind==='cc2'?'CC2 (database lead)':'CC5 (ringkasan)';
     if(!(y>=2020&&y<=2100)){ msg.textContent='Tahun tidak sah.'; return; }
     if(!id){ msg.textContent='Link Google Sheet tidak sah.'; return; }
-    var exists=srcFor(y);
-    ask((exists?'Tukar':'Tambah')+' sumber '+y+'?',(exists?'Link sheet '+y+' sekarang akan diganti. ':'')+'Pastikan akaun Google Drive kau boleh buka sheet ini, dan nama tab ikut format "JAN '+String(y).slice(2)+'", "FEB '+String(y).slice(2)+'" dan susun atur sama seperti CC5.',false,'Simpan','pri',function(){
-      var list=SOURCES.filter(function(x){return x.y!==y;}).concat([{y:y,id:id}]);
-      return saveSources(list).then(function(){ msg.textContent='Disimpan. Pilih tahun '+y+' di atas.'; $('srcLink').value=''; });
+    var exists=(kind==='cc2'?cc2SrcFor(y):srcFor(y));
+    ask((exists?'Tukar':'Tambah')+' sumber '+kindLabel+' '+y+'?',(exists?'Link sheet '+y+' sekarang akan diganti. ':'')+'Pastikan sheet di-share "Anyone with the link: Viewer", dan nama tab ikut format "JAN '+String(y).slice(2)+'", "FEB '+String(y).slice(2)+'" dan susun atur sama seperti '+kindLabel+'.',false,'Simpan','pri',function(){
+      return saveSource(kind,y,id,false).then(function(){ return fetchSources(); }).then(function(){ msg.textContent='Disimpan. Pilih tahun '+y+' di atas.'; $('srcLink').value=''; renderSrc(); renderBar(); });
     }); return;
   }
-  if(a==='srcdel'){ var yd=parseInt(v,10); ask('Buang sumber '+yd+'?','Link sheet '+yd+' akan dibuang daripada page. Sheet asal tidak terjejas. STATIC yang dikunci kekal.',true,'Buang','dng',function(){ return saveSources(SOURCES.filter(function(x){return x.y!==yd;})); }); return; }
+  if(a==='srcdel'){
+    var kd=b.getAttribute('data-kind'), yd=parseInt(v,10), kdLabel=kd==='cc2'?'CC2':'CC5';
+    ask('Buang sumber '+kdLabel+' '+yd+'?','Link sheet '+kdLabel+' '+yd+' akan dibuang daripada page. Sheet asal tidak terjejas. STATIC yang dikunci kekal.',true,'Buang','dng',function(){
+      return saveSource(kd,yd,null,true).then(function(){ return fetchSources(); }).then(function(){ renderSrc(); renderBar(); });
+    }); return;
+  }
   if(a==='print'){ makePdf(b); return; }
   if(a==='reload'){ TODAY=new Date(); loadData().then(function(){ fixSel(); render(); }).catch(function(err){ setBanner('<b>Gagal baca Google Sheet</b> · '+esc(errText(err))+' <button type="button" class="lnk" data-act="reload">Cuba lagi</button>'); }); return; }
   if(a==='dlgNo'){ $('dlg').close(); PEND=null; return; }
@@ -1137,8 +1187,8 @@ document.addEventListener('input',function(e){
 
 initTheme();
 setBanner('Memuatkan data…');
-connectDb().then(function(){ return loadData(); }).then(function(){ pickDefault(); render(); })
-  .catch(function(err){ setBanner('<b>Gagal baca Google Sheet</b> · '+esc(errText(err))+' Tiada angka dipaparkan. <button type="button" class="lnk" data-act="reload">Cuba lagi</button>'); });
+connectDb().then(function(){ return fetchSources(); }).then(function(){ SHEET_ID=srcFor(YEAR).id; CC2_SHEET_ID=(cc2SrcFor(YEAR)||{}).id||null; return loadData(); }).then(function(){ pickDefault(); render(); renderSrc(); })
+  .catch(function(err){ setBanner('<b>Gagal baca Google Sheet</b> · '+esc(errText(err))+' Tiada angka dipaparkan. <button type="button" class="lnk" data-act="reload">Cuba lagi</button>'); renderSrc(); });
 })();
 </script>
 

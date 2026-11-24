@@ -9,6 +9,8 @@
 //  POST /api/rv2/note     -> tulis SATU catatan (header X-RV2-Password wajib)  body {"key":"Facebook_2026_W11-3","data":{...}}
 //  GET  /api/rv2/meta     -> cache spend/lead Meta mingguan {at,ver,weeks} (public, read-only)
 //  POST /api/rv2/meta     -> cantum (merge) minggu baru ke cache meta (header X-RV2-Password wajib)  body {"weeks":{"11-3":{...}}}
+//  GET  /api/rv2/sources  -> link Google Sheet CC5/CC2 ikut tahun {cc5:{"2027":"<fileId>"},cc2:{...}} (public, read-only)
+//  POST /api/rv2/sources  -> tambah/tukar SATU link (header X-RV2-Password wajib)  body {"kind":"cc5"|"cc2","year":2027,"id":"..."} atau {"kind":"cc5","year":2027,"delete":true}
 //  GET  /api/health       -> semakan ringkas
 //
 // Binding: KV (namespace), RV2_PASSWORD (secret)
@@ -86,6 +88,32 @@ async function rv2Meta(env, req) {
   return json({ ok: true, weeks: Object.keys(weeks).length });
 }
 
+async function rv2Sources(env, req) {
+  if (req.method === "GET") {
+    const sources = JSON.parse((await env.KV.get("rv2:sources")) || '{"cc5":{},"cc2":{}}');
+    return json(sources);
+  }
+  if (!rv2Auth(env, req)) return json({ error: "Password salah." }, 401);
+  let body;
+  try { body = await req.json(); } catch { return json({ error: "Body mesti JSON." }, 400); }
+  const kind = String(body.kind || "");
+  if (kind !== "cc5" && kind !== "cc2") return json({ error: "kind mesti 'cc5' atau 'cc2'." }, 400);
+  const year = parseInt(body.year, 10);
+  if (!(year >= 2020 && year <= 2100)) return json({ error: "year tak sah." }, 400);
+  const cur = JSON.parse((await env.KV.get("rv2:sources")) || '{"cc5":{},"cc2":{}}');
+  cur.cc5 = cur.cc5 || {}; cur.cc2 = cur.cc2 || {};
+  if (body.delete) delete cur[kind][String(year)];
+  else {
+    const id = String(body.id || "").trim();
+    if (!/^[a-zA-Z0-9_-]{20,}$/.test(id)) return json({ error: "id Google Sheet tak sah." }, 400);
+    cur[kind][String(year)] = id;
+  }
+  const out = JSON.stringify(cur);
+  if (out.length > MAX_RV2_BYTES) return json({ error: "Storan sources penuh." }, 413);
+  await env.KV.put("rv2:sources", out);
+  return json({ ok: true, kind, year, deleted: !!body.delete });
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -98,7 +126,8 @@ export default {
     if (p === "/api/rv2/lock" && req.method === "POST") return rv2Lock(env, req);
     if (p === "/api/rv2/note" && req.method === "POST") return rv2Note(env, req);
     if (p === "/api/rv2/meta" && (req.method === "GET" || req.method === "POST")) return rv2Meta(env, req);
+    if (p === "/api/rv2/sources" && (req.method === "GET" || req.method === "POST")) return rv2Sources(env, req);
 
-    return json({ error: "Tidak dijumpai", routes: ["/api/health", "/api/rv2/state", "/api/rv2/check", "/api/rv2/lock", "/api/rv2/note", "/api/rv2/meta"] }, 404);
+    return json({ error: "Tidak dijumpai", routes: ["/api/health", "/api/rv2/state", "/api/rv2/check", "/api/rv2/lock", "/api/rv2/note", "/api/rv2/meta", "/api/rv2/sources"] }, 404);
   },
 };
