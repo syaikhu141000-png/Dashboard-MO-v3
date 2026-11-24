@@ -1,0 +1,39 @@
+name: Deploy report-v2-api (Worker)
+# Deploy Worker "report-v2-api" (KV + API khas Report Marketing V2) ke Cloudflare.
+# Sesi Claude disekat rangkaian daripada capai api.cloudflare.com / *.workers.dev terus,
+# jadi deploy ni jalan di sini (GitHub Actions) sahaja — bukan dari sesi Claude.
+#
+# Setup sekali sahaja: GitHub → Settings → Secrets and variables → Actions:
+#   CLOUDFLARE_API_TOKEN — token Cloudflare (permission: Workers Scripts Edit + Workers KV Storage Edit)
+#
+# Guna: tab "Actions" → "Deploy report-v2-api (Worker)" → "Run workflow".
+# Nak tetapkan/tukar RV2_PASSWORD sekali, isi input "password" bila Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      password:
+        description: "RV2_PASSWORD baru (kosongkan kalau tak nak tukar yang sedia ada)"
+        required: false
+        default: ""
+permissions:
+  contents: read
+concurrency: report-v2-api-deploy
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Deploy ke Cloudflare
+        working-directory: report-v2/worker
+        run: |
+          if [ -n "${{ github.event.inputs.password }}" ]; then
+            python3 deploy.py --password "${{ github.event.inputs.password }}"
+          else
+            python3 deploy.py
+          fi
