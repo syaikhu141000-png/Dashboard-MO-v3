@@ -663,12 +663,12 @@ function render(){
     var src=C.stat?'STATIC':'LIVE';
     $('tT').textContent=P.short+' vs '+C.short;
     $('tP').textContent=C.stat?'Pembanding menggunakan angka STATIC '+C.short:'STATIC '+C.short+' belum dikunci — pembanding menggunakan LIVE';
-    head='<thead><tr><th class="l">Metric</th><th>'+esc(C.short)+' '+src+'</th><th class="cur">'+esc(P.short)+' LIVE</th><th class="trend-cell">Perubahan</th><th>'+esc(P.short)+' STATIC</th></tr></thead>';
+    head='<thead><tr><th class="l">Metric</th><th>'+esc(C.short)+' LIVE</th><th>'+esc(C.short)+' STATIC</th><th class="cur">'+esc(P.short)+' LIVE</th><th class="trend-cell">Perubahan</th><th>'+esc(P.short)+' STATIC</th></tr></thead>';
     RG.forEach(function(g){
-      body+='<tr class="g"><td colspan="5">'+g.g+'</td></tr>';
+      body+='<tr class="g"><td colspan="6">'+g.g+'</td></tr>';
       g.rows.forEach(function(m){
-        var a=rv(base,m.k),d=rv(c,m.k),e=rv(P.stat,m.k),chg=m.k==='diff'?dAbs(d,a):delta(m,d,a);
-        body+='<tr><td class="l">'+m.t+(m.k==='spend'?'<div class="tnote">'+esc(spendNote())+'</div>':'')+'</td><td>'+fmt(m,a)+'</td><td class="cur">'+fmt(m,d)+'</td><td class="trend-cell">'+chg+'</td><td>'+fmt(m,e)+'</td></tr>';
+        var a=rv(base,m.k),cl=rv(C.live,m.k),cs=rv(C.stat,m.k),d=rv(c,m.k),e=rv(P.stat,m.k),chg=m.k==='diff'?dAbs(d,a):delta(m,d,a);
+        body+='<tr><td class="l">'+m.t+(m.k==='spend'?'<div class="tnote">'+esc(spendNote())+'</div>':'')+'</td><td>'+fmt(m,cl)+'</td><td>'+fmt(m,cs)+'</td><td class="cur">'+fmt(m,d)+'</td><td class="trend-cell">'+chg+'</td><td>'+fmt(m,e)+'</td></tr>';
       });
     });
   } else {
