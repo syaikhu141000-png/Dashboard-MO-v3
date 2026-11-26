@@ -1078,6 +1078,15 @@ function fetchSources(){
     CC2_SOURCES=DEFAULT_CC2_SOURCES.filter(function(d){ return !m2[String(d.y)]; }).concat(Object.keys(m2).map(function(y){ return {y:+y,id:m2[y]}; }));
   });
 }
+/* LOCKS/NOTES sumber sebenar ialah Worker (report-v2-api), bukan snapshot data.json (snapshot itu stale
+   bila scheduled task refresh harian tak jalan). Tarik live lepas loadData() supaya kunci/catatan yang
+   baru disimpan tak "hilang" bila page di-refresh. */
+function fetchState(){
+  return fetch(API_BASE+'/api/rv2/state',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; }).then(function(x){
+    if(x&&x.locks&&typeof x.locks==='object') LOCKS=Object.assign({},LOCKS,x.locks);
+    if(x&&x.notes&&typeof x.notes==='object') NOTES=Object.assign({},NOTES,x.notes);
+  });
+}
 function rv2Pw(){ try{ return sessionStorage.getItem('rv2pw')||''; }catch(e){ return ''; } }
 function rv2Headers(){ var h={'content-type':'application/json'}; var pw=rv2Pw(); if(pw) h['x-rv2-password']=pw; return h; }
 function updEditBtn(){ var b=$('btnEdit'); if(b) b.textContent=CAN?'Log keluar edit':'Log masuk edit'; }
@@ -1157,7 +1166,7 @@ document.addEventListener('click',function(e){
     }); return;
   }
   if(a==='print'){ makePdf(b); return; }
-  if(a==='reload'){ TODAY=new Date(); loadData().then(function(){ fixSel(); render(); }).catch(function(err){ setBanner('<b>Gagal baca Google Sheet</b> · '+esc(errText(err))+' <button type="button" class="lnk" data-act="reload">Cuba lagi</button>'); }); return; }
+  if(a==='reload'){ TODAY=new Date(); loadData().then(function(){ return fetchState(); }).then(function(){ fixSel(); render(); }).catch(function(err){ setBanner('<b>Gagal baca Google Sheet</b> · '+esc(errText(err))+' <button type="button" class="lnk" data-act="reload">Cuba lagi</button>'); }); return; }
   if(a==='dlgNo'){ $('dlg').close(); PEND=null; return; }
   if(a==='dlgYes'){ var f=PEND; PEND=null; $('dlg').close(); if(f) f().then(function(){ updLock(); render(); }).catch(function(err){ alert('Gagal: '+(err&&err.message||err)); }); return; }
   if(a==='edit'){ doEditToggle(); return; }
@@ -1187,7 +1196,7 @@ document.addEventListener('input',function(e){
 
 initTheme();
 setBanner('Memuatkan data…');
-connectDb().then(function(){ return fetchSources(); }).then(function(){ SHEET_ID=srcFor(YEAR).id; CC2_SHEET_ID=(cc2SrcFor(YEAR)||{}).id||null; return loadData(); }).then(function(){ pickDefault(); render(); renderSrc(); })
+connectDb().then(function(){ return fetchSources(); }).then(function(){ SHEET_ID=srcFor(YEAR).id; CC2_SHEET_ID=(cc2SrcFor(YEAR)||{}).id||null; return loadData(); }).then(function(){ return fetchState(); }).then(function(){ pickDefault(); render(); renderSrc(); })
   .catch(function(err){ setBanner('<b>Gagal baca Google Sheet</b> · '+esc(errText(err))+' Tiada angka dipaparkan. <button type="button" class="lnk" data-act="reload">Cuba lagi</button>'); renderSrc(); });
 })();
 </script>
